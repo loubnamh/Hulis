@@ -325,7 +325,7 @@ const App: React.FC = () => {
           onShowResults={() => setShowHuckelPopup(true)}
           onReorderAtoms={reorderAtoms}
           onClearAll={clearAll}
-          onConfigureParameters={openHuckelParameters} // Nouveau prop
+          onConfigureParameters={openHuckelParameters}
           isCalculating={isCalculating}
         />
 
@@ -339,7 +339,6 @@ const App: React.FC = () => {
                 marginTop: '4px',
                 fontFamily: 'monospace'
               }}>
-                Paramètres adaptatifs: N(2e⁻)=1.37/0.89β, N(1e⁻)=0.51/1.02β, O(2e⁻)=2.09/0.66β, O(1e⁻)=0.97/1.06β
               </div>
             )}
           </div>
