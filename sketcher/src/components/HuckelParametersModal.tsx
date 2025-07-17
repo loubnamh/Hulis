@@ -63,8 +63,13 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
     }
   };
 
+  const formatNumber = (value: number): string => {
+    if (Math.abs(value) < 0.001) return '0';
+    return parseFloat(value.toFixed(3)).toString();
+  };
+
   const resetToDefaults = () => {
-    
+ 
     const defaultParameters: HuckelParameters = {
       hX: {
         'C': 0.0,
@@ -193,10 +198,10 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
                     <div className="param-header">
                       <span className={`element-name ${['N', 'O'].includes(element) ? 'adaptive' : ''}`}>
                         {element}
-                        {['N', 'O'].includes(element) && <span className="adaptive-badge">⚡</span>}
+                        {['N', 'O'].includes(element) && <span className="adaptive-badge"></span>}
                       </span>
                       <span className="formula">
-                        α {value >= 0 ? '+' : ''}{value.toFixed(2)}β
+                        α {value >= 0 ? '+' : ''}{formatNumber(value)}β
                       </span>
                     </div>
                     <input
@@ -237,9 +242,9 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
                     <div className="param-header">
                       <span className={`bond-name ${['C-N', 'C-O'].includes(bondType) ? 'adaptive' : ''}`}>
                         {bondType}
-                        {['C-N', 'C-O'].includes(bondType) && <span className="adaptive-badge">⚡</span>}
+                        {['C-N', 'C-O'].includes(bondType) && <span className="adaptive-badge"></span>}
                       </span>
-                      <span className="formula">{value.toFixed(2)}β</span>
+                      <span className="formula">{formatNumber(value)}β</span>
                     </div>
                     <input
                       type="number"
@@ -265,7 +270,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
             onClick={resetToDefaults}
             className="hulis-button secondary"
           >
-            Valeurs par défaut
+             Valeurs par défaut
           </button>
 
           <div className="footer-actions">

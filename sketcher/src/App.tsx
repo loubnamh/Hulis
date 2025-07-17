@@ -45,16 +45,18 @@ const App: React.FC = () => {
   const [selectedMethod, setSelectedMethod] = useState<string>('HL-P');
   const [trustRank, setTrustRank] = useState<number>(100);
   const [selectedStructure, setSelectedStructure] = useState<number>(0);
-
+  
+  
   const [showNumberingModal, setShowNumberingModal] = useState<boolean>(false);
   const [customNumbering, setCustomNumbering] = useState<{ [atomId: number]: string }>({});
 
+  
   const [showHuckelParamsModal, setShowHuckelParamsModal] = useState<boolean>(false);
   const [huckelParameters, setHuckelParameters] = useState<HuckelParameters>({
     hX: {
       'C': 0.0,
       'N': 1.37,    // 2 e⁻π par défaut
-      'O': 2.09,    // 2 e⁻π par défaut 
+      'O': 2.09,    // 2 e⁻π par défaut
       'S': 0.6,
       'P': 0.8,
       'Cl': 2.0,
@@ -89,6 +91,7 @@ const App: React.FC = () => {
       ketcherComponentRef.current.ketcher = ketcher;
     }
     (window as any).ketcher = ketcher;
+    
 
     huckelCalculatorRef.current = new HuckelCalculator(
       ketcher, 
@@ -142,15 +145,17 @@ const App: React.FC = () => {
     }
   };
 
+  
   const handleHuckelParametersSave = (newParameters: HuckelParameters) => {
     setHuckelParameters(newParameters);
     
+  
     if (huckelCalculatorRef.current) {
       huckelCalculatorRef.current.updateParameters(newParameters);
     }
     
     setStatusMessage('Paramètres Hückel mis à jour');
-    console.log('✅ Nouveaux paramètres Hückel:', newParameters);
+    console.log(' Nouveaux paramètres Hückel:', newParameters);
   };
 
   const handleStructureChange = useCallback(() => {
@@ -201,20 +206,20 @@ const App: React.FC = () => {
     setStatusMessage('Détection automatique du système π...');
 
     try {
-      
+     
       const results = huckelCalculatorRef.current.calculate(totalCharge);
       
-      console.log('🧪 SYSTÈME π AVEC PARAMÈTRES ADAPTATIFS:');
-      console.log(`📊 ${results.piAtoms.length} atomes π`);
-      console.log(`🔢 Numérotation: ${results.piAtoms.map(a => `${a.element}${a.userNumber}(${a.piElectrons}e⁻)`).join(', ')}`);
-      console.log(`⚡ ${results.totalPiElectrons} électrons π`);
-      console.log('📈 Énergies:', results.energyExpressions);
-      console.log('⚙️ Paramètres utilisés:', results.parameters);
+      console.log(' SYSTÈME π AVEC PARAMÈTRES ADAPTATIFS:');
+      console.log(` ${results.piAtoms.length} atomes π`);
+      console.log(` Numérotation: ${results.piAtoms.map(a => `${a.element}${a.userNumber}(${a.piElectrons}e⁻)`).join(', ')}`);
+      console.log(` ${results.totalPiElectrons} électrons π`);
+      console.log(' Énergies:', results.energyExpressions);
+      console.log(' Paramètres utilisés:', results.parameters);
       
       setHuckelResults(results);
       
       const atomsList = results.piAtoms.map(a => `${a.element}${a.userNumber}(${a.piElectrons}e⁻)`).join(', ');
-      setStatusMessage(`Calcul terminé - Atomes π: ${atomsList} (${results.totalPiElectrons} e⁻, E=${results.totalEnergy.toFixed(3)}β)`);
+      setStatusMessage(`Calcul terminé - Atomes π: ${atomsList} (${results.totalPiElectrons} e⁻, E=${parseFloat(results.totalEnergy.toFixed(3))}β)`);
       
     } catch (error) {
       console.error('Erreur:', error);
@@ -290,7 +295,6 @@ const App: React.FC = () => {
     }
   };
 
-
   const openHuckelParameters = () => {
     setShowHuckelParamsModal(true);
     setStatusMessage('Configuration des paramètres Hückel...');
@@ -321,7 +325,7 @@ const App: React.FC = () => {
           onShowResults={() => setShowHuckelPopup(true)}
           onReorderAtoms={reorderAtoms}
           onClearAll={clearAll}
-          onConfigureParameters={openHuckelParameters} 
+          onConfigureParameters={openHuckelParameters} // Nouveau prop
           isCalculating={isCalculating}
         />
 
@@ -406,7 +410,7 @@ const App: React.FC = () => {
         />
       )}
 
-      {/*  Modal de configuration des paramètres Hückel */}
+      {/* NOUVEAU: Modal de configuration des paramètres Hückel */}
       {showHuckelParamsModal && (
         <HuckelParametersModal
           isOpen={showHuckelParamsModal}
