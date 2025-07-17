@@ -17,6 +17,7 @@ interface HuckelPanelProps {
   onShowResults: () => void;
   onReorderAtoms: () => void;
   onClearAll: () => void;
+  onConfigureParameters: () => void; 
   isCalculating: boolean;
 }
 
@@ -37,6 +38,7 @@ const HuckelPanel: React.FC<HuckelPanelProps> = ({
   onShowResults,
   onReorderAtoms,
   onClearAll,
+  onConfigureParameters,
   isCalculating
 }) => {
   return (
@@ -75,7 +77,48 @@ const HuckelPanel: React.FC<HuckelPanelProps> = ({
           </div>
         </div>
 
-      
+        {/* Groupe Configuration */}
+        <div className="button-group">
+          <div className="button-group-title">Configuration</div>
+          <div className="button-group-content">
+            <button 
+              className="hulis-button special-button" 
+              onClick={onConfigureParameters}
+              title="Configurer les paramètres hX et hXY de Hückel"
+              disabled={isCalculating}
+              style={{
+                background: 'linear-gradient(135deg, #7452edff 0%, #72c1eeff 100%)',
+                color: 'white',
+                fontWeight: '500',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '8px 12px',
+                cursor: isCalculating ? 'not-allowed' : 'pointer',
+                opacity: isCalculating ? 0.6 : 1,
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                fontSize: '13px',
+                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+                width: '100%'
+              }}
+              onMouseEnter={(e) => {
+                if (!isCalculating) {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(102, 126, 234, 0.3)';
+              }}
+            >
+              ⚙️ Paramètres hX/hXY
+            </button>
+          </div>
+        </div>
 
         {/* Groupe Affichage */}
         <div className="button-group">
@@ -91,8 +134,6 @@ const HuckelPanel: React.FC<HuckelPanelProps> = ({
               />
               <label htmlFor="atomNumbering">Numérotation des atomes</label>
             </div>
-            
-
             
             <div className="checkbox-item">
               <input 

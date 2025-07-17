@@ -30,6 +30,17 @@ const AtomNumberingModal: React.FC<AtomNumberingModalProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const modalRef = useRef<HTMLDivElement>(null);
 
+  const getCleanElement = (element: string): string => {
+ 
+    const elementMatch = element.match(/^([A-Z][a-z]{0,2})/);
+    return elementMatch ? elementMatch[1] : 'C';
+  };
+
+  const getExistingNumber = (element: string): string => {
+    const cleanElement = getCleanElement(element);
+    return element.substring(cleanElement.length).trim();
+  };
+
   useEffect(() => {
     if (isOpen && modalRef.current) {
       const rect = modalRef.current.getBoundingClientRect();
@@ -74,10 +85,11 @@ const AtomNumberingModal: React.FC<AtomNumberingModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-     
       const initialNumbering: { [atomId: number]: string } = {};
       atoms.forEach((atom, index) => {
-        initialNumbering[atom.id] = currentNumbering[atom.id] || `${index + 1}`;
+        
+        const existingNumber = getExistingNumber(atom.element);
+        initialNumbering[atom.id] = existingNumber || currentNumbering[atom.id] || `${index + 1}`;
       });
       setNumbering(initialNumbering);
     }
@@ -332,44 +344,48 @@ const AtomNumberingModal: React.FC<AtomNumberingModalProps> = ({
               <span>Numéro</span>
             </div>
             
-            {atoms.map((atom, index) => (
-              <div key={atom.id} style={{
-                display: 'grid',
-                gridTemplateColumns: '60px 120px 80px 80px',
-                gap: '10px',
-                padding: '10px',
-                borderBottom: index < atoms.length - 1 ? '1px solid #eee' : 'none',
-                alignItems: 'center'
-              }}>
-                <div style={{ fontWeight: 'bold', color: '#666' }}>
-                  {index + 1}
+            {atoms.map((atom, index) => {
+              const cleanElement = getCleanElement(atom.element);
+              
+              return (
+                <div key={atom.id} style={{
+                  display: 'grid',
+                  gridTemplateColumns: '60px 120px 80px 80px',
+                  gap: '10px',
+                  padding: '10px',
+                  borderBottom: index < atoms.length - 1 ? '1px solid #eee' : 'none',
+                  alignItems: 'center'
+                }}>
+                  <div style={{ fontWeight: 'bold', color: '#666' }}>
+                    {index + 1}
+                  </div>
+                  <div style={{ fontFamily: 'monospace', fontSize: '12px', color: '#555' }}>
+                    ({atom.position.x.toFixed(1)}, {atom.position.y.toFixed(1)})
+                  </div>
+                  <div style={{ fontWeight: 'bold', color: '#2c5aa0' }}>
+                    {cleanElement}
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      value={numbering[atom.id] || ''}
+                      onChange={(e) => handleNumberingChange(atom.id, e.target.value)}
+                      disabled={numberingMode === 'auto'}
+                      maxLength={3}
+                      style={{
+                        width: '60px',
+                        padding: '4px 8px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        textAlign: 'center',
+                        fontSize: '14px',
+                        background: numberingMode === 'auto' ? '#f5f5f5' : 'white'
+                      }}
+                    />
+                  </div>
                 </div>
-                <div style={{ fontFamily: 'monospace', fontSize: '12px', color: '#555' }}>
-                  ({atom.position.x.toFixed(1)}, {atom.position.y.toFixed(1)})
-                </div>
-                <div style={{ fontWeight: 'bold', color: '#2c5aa0' }}>
-                  {atom.element.replace(/\d+/g, '')}
-                </div>
-                <div>
-                  <input
-                    type="text"
-                    value={numbering[atom.id] || ''}
-                    onChange={(e) => handleNumberingChange(atom.id, e.target.value)}
-                    disabled={numberingMode === 'auto'}
-                    maxLength={3}
-                    style={{
-                      width: '60px',
-                      padding: '4px 8px',
-                      border: '1px solid #ccc',
-                      borderRadius: '4px',
-                      textAlign: 'center',
-                      fontSize: '14px',
-                      background: numberingMode === 'auto' ? '#f5f5f5' : 'white'
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div style={{ 
@@ -388,17 +404,21 @@ const AtomNumberingModal: React.FC<AtomNumberingModalProps> = ({
               fontWeight: 'bold',
               lineHeight: '1.4' 
             }}>
-              {atoms.map((atom, index) => (
-                <span key={atom.id} style={{
-                  background: '#e8f0fe',
-                  padding: '2px 4px',
-                  borderRadius: '3px',
-                  marginRight: '4px'
-                }}>
-                  {atom.element.replace(/\d+/g, '')}{numbering[atom.id] || index + 1}
-                  {index < atoms.length - 1 ? ', ' : ''}
-                </span>
-              ))}
+              {atoms.map((atom, index) => {
+                const cleanElement = getCleanElement(atom.element);
+                
+                return (
+                  <span key={atom.id} style={{
+                    background: '#e8f0fe',
+                    padding: '2px 4px',
+                    borderRadius: '3px',
+                    marginRight: '4px'
+                  }}>
+                    {cleanElement}{numbering[atom.id] || index + 1}
+                    {index < atoms.length - 1 ? ', ' : ''}
+                  </span>
+                );
+              })}
             </div>
           </div>
         </div>

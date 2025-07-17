@@ -25,6 +25,7 @@ export interface KetcherComponentRef {
   ketcher: Ketcher | null;
   customNumberingRef: React.MutableRefObject<{ [atomId: number]: string }>;
 }
+
 const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
   ({ onInit, onStructureChange, className = "" }, ref) => {
     const ketcherRef = useRef<Ketcher | null>(null);
@@ -152,16 +153,21 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
               let line = modifiedLines[lineIndex];
               
               if (line.length >= 34) {
-                const element = line.substring(31, 34).trim().replace(/\d+/g, '');
+               
+                const currentElement = line.substring(31, 34).trim();
+                
+                
+                const elementMatch = currentElement.match(/^([A-Z][a-z]{0,2})/);
+                const cleanElement = elementMatch ? elementMatch[1] : 'C';
                 
                 const atomNumber = updatedCustomNumbering[atom.id] || `${index + 1}`;
-                const numberedElement = `${element}${atomNumber}`;
+                const numberedElement = `${cleanElement}${atomNumber}`;
                 
                 const paddedElement = numberedElement.padEnd(3).substring(0, 3);
                 line = line.substring(0, 31) + paddedElement + line.substring(34);
                 
                 modifiedLines[lineIndex] = line;
-                console.log(`Atome ${index}: ${element} → ${numberedElement}`);
+                console.log(`Atome ${index}: ${currentElement} → ${numberedElement}`);
               }
             }
           });
@@ -208,7 +214,9 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
               
               if (line.length >= 34) {
                 const element = line.substring(31, 34).trim();
-                const cleanElement = element.replace(/\d+/g, '');
+               
+                const elementMatch = element.match(/^([A-Z][a-z]{0,2})/);
+                const cleanElement = elementMatch ? elementMatch[1] : 'C';
                 
                 const paddedElement = cleanElement.padEnd(3).substring(0, 3);
                 line = line.substring(0, 31) + paddedElement + line.substring(34);
@@ -231,17 +239,18 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
       }
     };
 
-   useImperativeHandle(ref, () => ({
-  getMolfile,
-  setMolecule,
-  getSmiles,
-  addAtomNumbers,
-  removeAtomNumbers,
-  areAtomNumbersVisible,
-  getAtomsInfo,
-  ketcher: ketcherRef.current,
-  customNumberingRef
-}));
+    useImperativeHandle(ref, () => ({
+      getMolfile,
+      setMolecule,
+      getSmiles,
+      addAtomNumbers,
+      removeAtomNumbers,
+      areAtomNumbersVisible,
+      getAtomsInfo,
+      ketcher: ketcherRef.current,
+      customNumberingRef
+    }));
+
     return (
       <div className={`ketcher-wrapper ${className}`}>
         <Editor

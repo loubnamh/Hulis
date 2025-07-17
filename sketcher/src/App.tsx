@@ -4,17 +4,23 @@ import KetcherComponent, { KetcherComponentRef } from './components/KetcherCompo
 import HuckelPanel from './components/HuckelPanel';
 import MesomeryPanel from './components/MesomeryPanel';
 import OrbitalDiagram from './components/OrbitalDiagram';
-import { HuckelCalculator } from './utils/HuckelCalculator';
+import { HuckelCalculator, HuckelParameters } from './utils/HuckelCalculator';
 import MenuBar from './components/MenuBar';
 import StatusBar from './components/StatusBar';
 import ResultsPopup from './components/ResultsPopup';
 import AtomNumberingModal from './components/AtomNumberingModal';
+import HuckelParametersModal from './components/HuckelParametersModal';
 import './App.css';
 
 interface HuckelResults {
   energies: number[];
   coefficients: number[][];
   occupations: number[];
+  piAtoms: any[];
+  totalPiElectrons: number;
+  energyExpressions: string[];
+  totalEnergy: number;
+  parameters: HuckelParameters;
 }
 
 interface MesomeryResults {
@@ -39,20 +45,59 @@ const App: React.FC = () => {
   const [selectedMethod, setSelectedMethod] = useState<string>('HL-P');
   const [trustRank, setTrustRank] = useState<number>(100);
   const [selectedStructure, setSelectedStructure] = useState<number>(0);
-  
- 
+
   const [showNumberingModal, setShowNumberingModal] = useState<boolean>(false);
   const [customNumbering, setCustomNumbering] = useState<{ [atomId: number]: string }>({});
 
+  const [showHuckelParamsModal, setShowHuckelParamsModal] = useState<boolean>(false);
+  const [huckelParameters, setHuckelParameters] = useState<HuckelParameters>({
+    hX: {
+      'C': 0.0,
+      'N': 1.37,    // 2 e⁻π par défaut
+      'O': 2.09,    // 2 e⁻π par défaut 
+      'S': 0.6,
+      'P': 0.8,
+      'Cl': 2.0,
+      'Br': 1.5,
+      'F': 3.0,
+      'B': -1.0,
+      'Si': -0.5
+    },
+    hXY: {
+      'C-C': 1.0,
+      'C-N': 0.89,  // 2 e⁻π par défaut
+      'N-N': 0.98,
+      'C-O': 0.66,  // 2 e⁻π par défaut 
+      'C-S': 0.7,
+      'C-P': 0.6,
+      'C-Cl': 0.4,
+      'C-Br': 0.3,
+      'C-F': 0.7,
+      'C-B': 0.7,
+      'C-Si': 0.6,
+      'N-O': 0.6,
+      'O-O': 0.6,
+      'S-S': 0.5
+    }
+  });
+
   const ketcherComponentRef = useRef<KetcherComponentRef>(null);
+  const huckelCalculatorRef = useRef<HuckelCalculator | null>(null);
 
   const handleKetcherInit = useCallback((ketcher: Ketcher) => {
     if (ketcherComponentRef.current) {
       ketcherComponentRef.current.ketcher = ketcher;
     }
     (window as any).ketcher = ketcher;
+
+    huckelCalculatorRef.current = new HuckelCalculator(
+      ketcher, 
+      ketcherComponentRef,
+      huckelParameters
+    );
+    
     setStatusMessage('Ketcher initialisé - Prêt à dessiner');
-  }, []);
+  }, [huckelParameters]);
 
   const changeCharge = (delta: number) => {
     setTotalCharge(prev => prev + delta);
@@ -68,12 +113,10 @@ const App: React.FC = () => {
       setStatusMessage(value ? 'Activation de la numérotation automatique...' : 'Suppression des numéros d\'atomes...');
 
       if (value) {
-       
         await ketcherComponentRef.current.addAtomNumbers(customNumbering);
         setAtomNumbering(true);
         setStatusMessage('Numérotation automatique activée - Les nouveaux atomes seront numérotés automatiquement');
       } else {
-        
         await ketcherComponentRef.current.removeAtomNumbers();
         setAtomNumbering(false);
         setStatusMessage('Numérotation désactivée');
@@ -83,8 +126,6 @@ const App: React.FC = () => {
       setStatusMessage('Erreur lors de la numérotation des atomes');
     }
   };
-
-  
 
   const handleNumberingSave = async (numbering: { [atomId: number]: string }) => {
     setCustomNumbering(numbering);
@@ -99,6 +140,17 @@ const App: React.FC = () => {
         setStatusMessage('Erreur lors de l\'application de la numérotation');
       }
     }
+  };
+
+  const handleHuckelParametersSave = (newParameters: HuckelParameters) => {
+    setHuckelParameters(newParameters);
+    
+    if (huckelCalculatorRef.current) {
+      huckelCalculatorRef.current.updateParameters(newParameters);
+    }
+    
+    setStatusMessage('Paramètres Hückel mis à jour');
+    console.log('✅ Nouveaux paramètres Hückel:', newParameters);
   };
 
   const handleStructureChange = useCallback(() => {
@@ -124,10 +176,10 @@ const App: React.FC = () => {
           
           ketcherComponentRef.current.addAtomNumbers(filteredCustomNumbering)
             .then(() => {
-              console.log(' Numérotation automatique mise à jour');
+              console.log('✓ Numérotation automatique mise à jour');
             })
             .catch((error) => {
-              console.error(' Erreur lors de la mise à jour automatique:', error);
+              console.error('✗ Erreur lors de la mise à jour automatique:', error);
               setStatusMessage('Erreur lors de la mise à jour de la numérotation');
             });
         }
@@ -139,42 +191,39 @@ const App: React.FC = () => {
     setCurrentLanguage(prev => prev === 'fr' ? 'en' : 'fr');
   };
 
-const calculateHuckel = async () => {
-  if (!ketcherComponentRef.current?.ketcher) {
-    setStatusMessage('Erreur: Ketcher non initialisé');
-    return;
-  }
+  const calculateHuckel = async () => {
+    if (!ketcherComponentRef.current?.ketcher || !huckelCalculatorRef.current) {
+      setStatusMessage('Erreur: Ketcher non initialisé');
+      return;
+    }
 
-  setIsCalculating(true);
-  setStatusMessage('Détection automatique du système π...');
+    setIsCalculating(true);
+    setStatusMessage('Détection automatique du système π...');
 
-  try {
-    
-    const calculator = new HuckelCalculator(
-      ketcherComponentRef.current.ketcher, 
-      ketcherComponentRef 
-    );
-    
-    const results = calculator.calculate(totalCharge);
-    
-    console.log(' SYSTÈME π AVEC VRAIE NUMÉROTATION:');
-    console.log(` ${results.piAtoms.length} atomes π`);
-    console.log(` Numérotation utilisateur: ${results.piAtoms.map(a => `${a.element}${a.userNumber}`).join(', ')}`);
-    console.log(` ${results.totalPiElectrons} électrons π`);
-    console.log(' Énergies:', results.energyExpressions);
-    
-    setHuckelResults(results);
-    
-    const atomsList = results.piAtoms.map(a => `${a.element}${a.userNumber}`).join(', ');
-    setStatusMessage(`Calcul terminé - Atomes π: ${atomsList} (${results.totalPiElectrons} électrons)`);
-    
-  } catch (error) {
-    console.error('Erreur:', error);
-    setStatusMessage(error instanceof Error ? error.message : 'Erreur lors du calcul');
-  } finally {
-    setIsCalculating(false);
-  }
-};
+    try {
+      
+      const results = huckelCalculatorRef.current.calculate(totalCharge);
+      
+      console.log('🧪 SYSTÈME π AVEC PARAMÈTRES ADAPTATIFS:');
+      console.log(`📊 ${results.piAtoms.length} atomes π`);
+      console.log(`🔢 Numérotation: ${results.piAtoms.map(a => `${a.element}${a.userNumber}(${a.piElectrons}e⁻)`).join(', ')}`);
+      console.log(`⚡ ${results.totalPiElectrons} électrons π`);
+      console.log('📈 Énergies:', results.energyExpressions);
+      console.log('⚙️ Paramètres utilisés:', results.parameters);
+      
+      setHuckelResults(results);
+      
+      const atomsList = results.piAtoms.map(a => `${a.element}${a.userNumber}(${a.piElectrons}e⁻)`).join(', ');
+      setStatusMessage(`Calcul terminé - Atomes π: ${atomsList} (${results.totalPiElectrons} e⁻, E=${results.totalEnergy.toFixed(3)}β)`);
+      
+    } catch (error) {
+      console.error('Erreur:', error);
+      setStatusMessage(error instanceof Error ? error.message : 'Erreur lors du calcul');
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
   const calculateMesomery = async () => {
     if (!ketcherComponentRef.current?.ketcher) {
       setStatusMessage('Erreur: Ketcher non initialisé');
@@ -225,7 +274,6 @@ const calculateHuckel = async () => {
       return;
     }
 
-    
     if (atomNumbering) {
       const atoms = ketcherComponentRef.current.getAtomsInfo();
       if (atoms.length === 0) {
@@ -235,12 +283,17 @@ const calculateHuckel = async () => {
       setShowNumberingModal(true);
       setStatusMessage('Ouverture de la personnalisation de la numérotation...');
     } else {
-      
       setStatusMessage('Réorganisation des atomes...');
       setTimeout(() => {
         setStatusMessage('Atomes réorganisés');
       }, 500);
     }
+  };
+
+
+  const openHuckelParameters = () => {
+    setShowHuckelParamsModal(true);
+    setStatusMessage('Configuration des paramètres Hückel...');
   };
 
   return (
@@ -268,12 +321,23 @@ const calculateHuckel = async () => {
           onShowResults={() => setShowHuckelPopup(true)}
           onReorderAtoms={reorderAtoms}
           onClearAll={clearAll}
+          onConfigureParameters={openHuckelParameters} 
           isCalculating={isCalculating}
         />
 
         <div className="center-zone">
           <div className="center-header">
             Fenêtre d'Application et orbitales
+            {huckelResults && (
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#666', 
+                marginTop: '4px',
+                fontFamily: 'monospace'
+              }}>
+                Paramètres adaptatifs: N(2e⁻)=1.37/0.89β, N(1e⁻)=0.51/1.02β, O(2e⁻)=2.09/0.66β, O(1e⁻)=0.97/1.06β
+              </div>
+            )}
           </div>
           <div className="molecule-display">
             <div className="ketcher-container">
@@ -311,6 +375,7 @@ const calculateHuckel = async () => {
         <StatusBar message={statusMessage} />
       </div>
 
+      {/* Popup des résultats Hückel */}
       {showHuckelPopup && (
         <ResultsPopup
           title="Résultats Hückel"
@@ -320,6 +385,7 @@ const calculateHuckel = async () => {
         />
       )}
 
+      {/* Popup des résultats Mésomérie */}
       {showMesomeryPopup && (
         <ResultsPopup
           title="Résultats Mésomérie"
@@ -329,6 +395,7 @@ const calculateHuckel = async () => {
         />
       )}
 
+      {/* Modal de numérotation des atomes */}
       {showNumberingModal && (
         <AtomNumberingModal
           isOpen={showNumberingModal}
@@ -339,13 +406,26 @@ const calculateHuckel = async () => {
         />
       )}
 
+      {/*  Modal de configuration des paramètres Hückel */}
+      {showHuckelParamsModal && (
+        <HuckelParametersModal
+          isOpen={showHuckelParamsModal}
+          currentParameters={huckelParameters}
+          onClose={() => {
+            setShowHuckelParamsModal(false);
+            setStatusMessage('Configuration des paramètres fermée');
+          }}
+          onSave={handleHuckelParametersSave}
+        />
+      )}
+
+      {/* Indicateur de calcul */}
       {isCalculating && (
         <div className="calculating">
           <div className="spinner"></div>
           <div>Calcul en cours...</div>
         </div>
       )}
-      
     </div>
   );
 };
