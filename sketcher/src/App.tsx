@@ -53,33 +53,34 @@ const App: React.FC = () => {
   
   const [showHuckelParamsModal, setShowHuckelParamsModal] = useState<boolean>(false);
   const [huckelParameters, setHuckelParameters] = useState<HuckelParameters>({
-    hX: {
+     hX: {
       'C': 0.0,
       'N': 1.37,    // 2 e⁻π par défaut
       'O': 2.09,    // 2 e⁻π par défaut
-      'S': 0.6,
-      'P': 0.8,
+      'S': 1.11,    // 2 e⁻π par défaut 
+      'P': 0.75,    // 2 e⁻π par défaut 
       'Cl': 2.0,
-      'Br': 1.5,
-      'F': 3.0,
-      'B': -1.0,
-      'Si': -0.5
+      'Br': 1.48,
+      'F': 2.71,
+      'B': -0.45,
+      'Si': 0
     },
     hXY: {
       'C-C': 1.0,
       'C-N': 0.89,  // 2 e⁻π par défaut
       'N-N': 0.98,
       'C-O': 0.66,  // 2 e⁻π par défaut 
-      'C-S': 0.7,
-      'C-P': 0.6,
+      'C-S': 0.69,  // 2 e⁻π par défaut 
+      'C-P': 0.76,  // 2 e⁻π par défaut 
       'C-Cl': 0.4,
-      'C-Br': 0.3,
-      'C-F': 0.7,
-      'C-B': 0.7,
-      'C-Si': 0.6,
+      'C-Br': 0.62,
+      'C-F': 0.52,
+      'C-B': 0.73,
+      'C-Si': 0.75,
       'N-O': 0.6,
       'O-O': 0.6,
-      'S-S': 0.5
+      'S-S': 0.5,
+      'P-P': 0.5
     }
   });
 

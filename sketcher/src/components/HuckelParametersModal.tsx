@@ -69,36 +69,37 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
   };
 
   const resetToDefaults = () => {
- 
+    // Nouveaux paramètres par défaut avec S et P adaptatifs
     const defaultParameters: HuckelParameters = {
-      hX: {
-        'C': 0.0,
-        'N': 1.37,    // 2 e⁻π par défaut
-        'O': 2.09,    // 2 e⁻π par défaut 
-        'S': 0.6,
-        'P': 0.8,
-        'Cl': 2.0,
-        'Br': 1.5,
-        'F': 3.0,
-        'B': -1.0,
-        'Si': -0.5
-      },
-      hXY: {
-        'C-C': 1.0,
-        'C-N': 0.89,  // 2 e⁻π par défaut
-        'N-N': 0.98,
-        'C-O': 0.66,  // 2 e⁻π par défaut 
-        'C-S': 0.7,
-        'C-P': 0.6,
-        'C-Cl': 0.4,
-        'C-Br': 0.3,
-        'C-F': 0.7,
-        'C-B': 0.7,
-        'C-Si': 0.6,
-        'N-O': 0.6,
-        'O-O': 0.6,
-        'S-S': 0.5
-      }
+     hX: {
+      'C': 0.0,
+      'N': 1.37,    // 2 e⁻π par défaut
+      'O': 2.09,    // 2 e⁻π par défaut
+      'S': 1.11,    // 2 e⁻π par défaut 
+      'P': 0.75,    // 2 e⁻π par défaut 
+      'Cl': 2.0,
+      'Br': 1.48,
+      'F': 2.71,
+      'B': -0.45,
+      'Si': 0
+    },
+    hXY: {
+      'C-C': 1.0,
+      'C-N': 0.89,  // 2 e⁻π par défaut
+      'N-N': 0.98,
+      'C-O': 0.66,  // 2 e⁻π par défaut 
+      'C-S': 0.69,  // 2 e⁻π par défaut 
+      'C-P': 0.76,  // 2 e⁻π par défaut 
+      'C-Cl': 0.4,
+      'C-Br': 0.62,
+      'C-F': 0.52,
+      'C-B': 0.73,
+      'C-Si': 0.75,
+      'N-O': 0.6,
+      'O-O': 0.6,
+      'S-S': 0.5,
+      'P-P': 0.5
+    }
     };
     setParameters(defaultParameters);
   };
@@ -115,6 +116,12 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
     if (element === 'O') {
       return ' Adaptatif: 2e⁻π=2.09, 1e⁻π=0.97';
     }
+    if (element === 'S') {
+      return ' Adaptatif: 2e⁻π=1.11, 1e⁻π=0.46';
+    }
+    if (element === 'P') {
+      return ' Adaptatif: 2e⁻π=0.75, 1e⁻π=0.19';
+    }
     return '';
   };
 
@@ -125,7 +132,21 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
     if (bondType === 'C-O') {
       return ' Adaptatif: O(2e⁻)=0.66, O(1e⁻)=1.06';
     }
+    if (bondType === 'C-S') {
+      return ' Adaptatif: S(2e⁻)=0.69, S(1e⁻)=0.81';
+    }
+    if (bondType === 'C-P') {
+      return ' Adaptatif: P(2e⁻)=0.76, P(1e⁻)=0.77';
+    }
     return '';
+  };
+
+  const isAdaptiveElement = (element: string): boolean => {
+    return ['N', 'O', 'S', 'P'].includes(element);
+  };
+
+  const isAdaptiveBond = (bondType: string): boolean => {
+    return ['C-N', 'C-O', 'C-S', 'C-P'].includes(bondType);
   };
 
   if (!isOpen) return null;
@@ -136,7 +157,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
         {/* Header */}
         <div className="modal-header huckel-header-style">
           <div>
-            <h3> Paramètres Hückel Adaptatifs</h3>
+            <h3>⚙️ Paramètres Hückel Adaptatifs</h3>
             <div className="header-subtitle">Configuration des paramètres hX (α) et hXY (β) - Auto-ajustement selon e⁻π</div>
           </div>
           <button 
@@ -147,31 +168,20 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           </button>
         </div>
 
-        {/* Info adaptatif */}
-        <div className="adaptive-info">
-          <div className="info-box">
-            <strong> Paramètres Adaptatifs:</strong> N et O s'ajustent automatiquement selon leurs électrons π
-            <br />
-            <small>
-              N: 1e⁻π (hX=0.51, hXY=1.02) | 2e⁻π (hX=1.37, hXY=0.89) • 
-              O: 1e⁻π (hX=0.97, hXY=1.06) | 2e⁻π (hX=2.09, hXY=0.66)
-            </small>
-          </div>
-        </div>
-
+        
         {/* Tabs */}
         <div className="param-tabs">
           <button
             onClick={() => setActiveTab('hX')}
             className={`param-tab ${activeTab === 'hX' ? 'active' : ''}`}
           >
-             Paramètres hX (éléments)
+            🔬 Paramètres hX (éléments)
           </button>
           <button
             onClick={() => setActiveTab('hXY')}
             className={`param-tab ${activeTab === 'hXY' ? 'active' : ''}`}
           >
-             Paramètres hXY (liaisons)
+            🔗 Paramètres hXY (liaisons)
           </button>
         </div>
 
@@ -196,9 +206,9 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
                 {Object.entries(parameters.hX).map(([element, value]) => (
                   <div key={element} className="param-card">
                     <div className="param-header">
-                      <span className={`element-name ${['N', 'O'].includes(element) ? 'adaptive' : ''}`}>
+                      <span className={`element-name ${isAdaptiveElement(element) ? 'adaptive' : ''}`}>
                         {element}
-                        {['N', 'O'].includes(element) && <span className="adaptive-badge"></span>}
+                        {isAdaptiveElement(element) && <span className="adaptive-badge"></span>}
                       </span>
                       <span className="formula">
                         α {value >= 0 ? '+' : ''}{formatNumber(value)}β
@@ -209,8 +219,9 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
                       step="0.01"
                       value={value}
                       onChange={(e) => updateHX(element, e.target.value)}
-                      className="param-input-field"
+                      className={`param-input-field ${isAdaptiveElement(element) ? 'adaptive-input' : ''}`}
                       title={getElementInfo(element)}
+                      placeholder={isAdaptiveElement(element) ? 'Auto-ajusté' : ''}
                     />
                     {getElementInfo(element) && (
                       <div className="adaptive-info-small">{getElementInfo(element)}</div>
@@ -240,9 +251,9 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
                 {Object.entries(parameters.hXY).map(([bondType, value]) => (
                   <div key={bondType} className="param-card">
                     <div className="param-header">
-                      <span className={`bond-name ${['C-N', 'C-O'].includes(bondType) ? 'adaptive' : ''}`}>
+                      <span className={`bond-name ${isAdaptiveBond(bondType) ? 'adaptive' : ''}`}>
                         {bondType}
-                        {['C-N', 'C-O'].includes(bondType) && <span className="adaptive-badge"></span>}
+                        {isAdaptiveBond(bondType) && <span className="adaptive-badge"></span>}
                       </span>
                       <span className="formula">{formatNumber(value)}β</span>
                     </div>
@@ -251,8 +262,9 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
                       step="0.01"
                       value={value}
                       onChange={(e) => updateHXY(bondType, e.target.value)}
-                      className="param-input-field"
+                      className={`param-input-field ${isAdaptiveBond(bondType) ? 'adaptive-input' : ''}`}
                       title={getBondInfo(bondType)}
+                      placeholder={isAdaptiveBond(bondType) ? 'Auto-ajusté' : ''}
                     />
                     {getBondInfo(bondType) && (
                       <div className="adaptive-info-small">{getBondInfo(bondType)}</div>
@@ -264,16 +276,22 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer avec légende */}
         <div className="modal-footer">
-          <button
-            onClick={resetToDefaults}
-            className="hulis-button secondary"
-          >
-             Valeurs par défaut
-          </button>
+          <div className="legend">
+            <span className="legend-item">
+              <span className="adaptive-badge"></span>
+              <span>Paramètre adaptatif (N, O, S, P)</span>
+            </span>
+          </div>
 
           <div className="footer-actions">
+            <button
+              onClick={resetToDefaults}
+              className="hulis-button secondary"
+            >
+              🔄 Valeurs par défaut
+            </button>
             <button
               onClick={onClose}
               className="hulis-button secondary"
@@ -284,7 +302,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
               onClick={handleSave}
               className="hulis-button primary"
             >
-               Sauvegarder
+              💾 Sauvegarder
             </button>
           </div>
         </div>
@@ -292,7 +310,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
 
       <style>{`
         .huckel-params-modal {
-          width: 750px;
+          width: 800px;
           max-height: 90vh;
           background: #e0e8ff;
           border: 2px outset #c0c0c0;
@@ -335,14 +353,15 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
         }
 
         .adaptive-info {
-          background: #f0f8ff;
+          background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
           border-bottom: 1px solid #ccc;
-          padding: 8px 16px;
+          padding: 10px 16px;
         }
 
         .info-box {
           font-size: 12px;
           color: #333;
+          line-height: 1.4;
         }
 
         .info-box strong {
@@ -353,6 +372,21 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           color: #666;
         }
 
+        .element-group {
+          display: inline-block;
+          margin: 0 2px;
+        }
+
+        .element-group strong {
+          color: #e67e22;
+          font-weight: bold;
+        }
+
+        .separator {
+          color: #999;
+          font-weight: bold;
+        }
+
         .param-tabs {
           display: flex;
           background: #f0f0f0;
@@ -361,7 +395,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
 
         .param-tab {
           flex: 1;
-          padding: 8px 12px;
+          padding: 10px 12px;
           border: none;
           background: #e8e8e8;
           border-bottom: 2px solid transparent;
@@ -424,7 +458,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
 
         .params-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
           gap: 12px;
           max-height: 320px;
           overflow-y: auto;
@@ -434,8 +468,13 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
         .param-card {
           background: white;
           border: 1px inset #c0c0c0;
-          padding: 10px;
+          padding: 12px;
           border-radius: 4px;
+          transition: box-shadow 0.2s;
+        }
+
+        .param-card:hover {
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
         }
 
         .param-header {
@@ -458,11 +497,21 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
         .element-name.adaptive,
         .bond-name.adaptive {
           color: #e67e22;
+          background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+          padding: 2px 6px;
+          border-radius: 12px;
+          font-size: 13px;
         }
 
         .adaptive-badge {
-          font-size: 10px;
-          color: #e67e22;
+          font-size: 12px;
+          color: #ff9800;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
         }
 
         .formula {
@@ -470,18 +519,20 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           color: #666;
           font-family: 'Courier New', monospace;
           background: #f8f8f8;
-          padding: 2px 4px;
+          padding: 2px 6px;
           border-radius: 2px;
+          border: 1px solid #e0e0e0;
         }
 
         .param-input-field {
           width: 100%;
-          padding: 4px 6px;
+          padding: 6px 8px;
           border: 1px inset #c0c0c0;
           font-size: 12px;
           font-family: inherit;
           text-align: center;
           background: white;
+          transition: all 0.2s;
         }
 
         .param-input-field:focus {
@@ -490,12 +541,25 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           background: #f8f8ff;
         }
 
+        .param-input-field.adaptive-input {
+          background: linear-gradient(135deg, #fff8f0 0%, #fff3e0 100%);
+          border: 1px inset #ffb74d;
+        }
+
+        .param-input-field.adaptive-input:focus {
+          background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+          border: 1px inset #ff9800;
+        }
+
         .adaptive-info-small {
           font-size: 9px;
           color: #e67e22;
           text-align: center;
           margin-top: 4px;
           font-style: italic;
+          background: rgba(255, 152, 0, 0.1);
+          padding: 2px 4px;
+          border-radius: 2px;
         }
 
         .modal-footer {
@@ -505,6 +569,19 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           display: flex;
           justify-content: space-between;
           align-items: center;
+        }
+
+        .legend {
+          display: flex;
+          align-items: center;
+          font-size: 11px;
+          color: #666;
+        }
+
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
         }
 
         .footer-actions {
