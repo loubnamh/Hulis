@@ -4,7 +4,8 @@ import KetcherComponent, { KetcherComponentRef } from './components/KetcherCompo
 import HuckelPanel from './components/HuckelPanel';
 import MesomeryPanel from './components/MesomeryPanel';
 import OrbitalDiagram from './components/OrbitalDiagram';
-import { HuckelCalculator, HuckelParameters } from './utils/HuckelCalculator';
+import { HuckelCalculator } from './utils/HuckelCalculator';
+import { HuckelParameters, DEFAULT_HUCKEL_PARAMETERS } from './utils/HuckelParametersConfig';
 import MenuBar from './components/MenuBar';
 import StatusBar from './components/StatusBar';
 import ResultsPopup from './components/ResultsPopup';
@@ -20,6 +21,7 @@ interface HuckelResults {
   totalPiElectrons: number;
   energyExpressions: string[];
   totalEnergy: number;
+  hamiltonianMatrix: number[][];  
   parameters: HuckelParameters;
 }
 
@@ -29,6 +31,7 @@ interface MesomeryResults {
 }
 
 const App: React.FC = () => {
+  // États existants
   const [totalCharge, setTotalCharge] = useState<number>(0);
   const [alpha, setAlpha] = useState<number>(-11.4);
   const [beta, setBeta] = useState<number>(-2.4);
@@ -41,58 +44,32 @@ const App: React.FC = () => {
   const [showHuckelPopup, setShowHuckelPopup] = useState<boolean>(false);
   const [showMesomeryPopup, setShowMesomeryPopup] = useState<boolean>(false);
   const [isCalculating, setIsCalculating] = useState<boolean>(false);
-  const [statusMessage, setStatusMessage] = useState<string>('HuLiS 3.2 initialisé - Dessinez une molécule dans l\'éditeur Ketcher');
+  const [statusMessage, setStatusMessage] = useState<string>('HuLiS 3.2 initialise avec parametres J. Org. Chem. 1980 - Dessinez une molecule dans l\'editeur Ketcher');
   const [selectedMethod, setSelectedMethod] = useState<string>('HL-P');
   const [trustRank, setTrustRank] = useState<number>(100);
   const [selectedStructure, setSelectedStructure] = useState<number>(0);
   
+  // Nouveaux états pour la visualisation des orbitales
+  const [selectedOrbitalIndex, setSelectedOrbitalIndex] = useState<number>(-1);
+  const [showOrbitalVisualization, setShowOrbitalVisualization] = useState<boolean>(true);
+  const [orbitalScale, setOrbitalScale] = useState<number>(50);
   
+  // États pour les modales
   const [showNumberingModal, setShowNumberingModal] = useState<boolean>(false);
   const [customNumbering, setCustomNumbering] = useState<{ [atomId: number]: string }>({});
-
-  
   const [showHuckelParamsModal, setShowHuckelParamsModal] = useState<boolean>(false);
-  const [huckelParameters, setHuckelParameters] = useState<HuckelParameters>({
-     hX: {
-      'C': 0.0,
-      'N': 1.37,    // 2 e⁻π par défaut
-      'O': 2.09,    // 2 e⁻π par défaut
-      'S': 1.11,    // 2 e⁻π par défaut 
-      'P': 0.75,    // 2 e⁻π par défaut 
-      'Cl': 2.0,
-      'Br': 1.48,
-      'F': 2.71,
-      'B': -0.45,
-      'Si': 0
-    },
-    hXY: {
-      'C-C': 1.0,
-      'C-N': 0.89,  // 2 e⁻π par défaut
-      'N-N': 0.98,
-      'C-O': 0.66,  // 2 e⁻π par défaut 
-      'C-S': 0.69,  // 2 e⁻π par défaut 
-      'C-P': 0.76,  // 2 e⁻π par défaut 
-      'C-Cl': 0.4,
-      'C-Br': 0.62,
-      'C-F': 0.52,
-      'C-B': 0.73,
-      'C-Si': 0.75,
-      'N-O': 0.6,
-      'O-O': 0.6,
-      'S-S': 0.5,
-      'P-P': 0.5
-    }
-  });
+  const [huckelParameters, setHuckelParameters] = useState<HuckelParameters>(DEFAULT_HUCKEL_PARAMETERS);
 
+  // Références
   const ketcherComponentRef = useRef<KetcherComponentRef>(null);
   const huckelCalculatorRef = useRef<HuckelCalculator | null>(null);
 
+  // Initialisation de Ketcher
   const handleKetcherInit = useCallback((ketcher: Ketcher) => {
     if (ketcherComponentRef.current) {
       ketcherComponentRef.current.ketcher = ketcher;
     }
     (window as any).ketcher = ketcher;
-    
 
     huckelCalculatorRef.current = new HuckelCalculator(
       ketcher, 
@@ -100,34 +77,40 @@ const App: React.FC = () => {
       huckelParameters
     );
     
-    setStatusMessage('Ketcher initialisé - Prêt à dessiner');
+    setStatusMessage('Ketcher initialise - Pret a dessiner');
   }, [huckelParameters]);
 
+  // Gestion des charges
   const changeCharge = (delta: number) => {
     setTotalCharge(prev => prev + delta);
   };
 
+  // Gestion de la numérotation des atomes
   const handleAtomNumberingChange = async (value: boolean) => {
     if (!ketcherComponentRef.current) {
-      setStatusMessage('Erreur: Ketcher non initialisé');
+      setStatusMessage('Erreur: Ketcher non initialise');
       return;
     }
 
     try {
-      setStatusMessage(value ? 'Activation de la numérotation automatique...' : 'Suppression des numéros d\'atomes...');
+      setStatusMessage(value ? 'Activation de la numerotation automatique...' : 'Suppression des numeros d\'atomes...');
 
       if (value) {
         await ketcherComponentRef.current.addAtomNumbers(customNumbering);
         setAtomNumbering(true);
-        setStatusMessage('Numérotation automatique activée - Les nouveaux atomes seront numérotés automatiquement');
+        setStatusMessage('Numerotation automatique activee - Les nouveaux atomes seront numerotes automatiquement');
       } else {
         await ketcherComponentRef.current.removeAtomNumbers();
         setAtomNumbering(false);
-        setStatusMessage('Numérotation désactivée');
+        setStatusMessage('Numerotation desactivee');
+      }
+      
+      // Actualiser l'overlay des orbitales après changement de numérotation
+      if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
+        setTimeout(() => ketcherComponentRef.current?.refreshOrbitalOverlay(), 100);
       }
     } catch (error) {
-      console.error('Erreur lors du changement de numérotation:', error);
-      setStatusMessage('Erreur lors de la numérotation des atomes');
+      setStatusMessage('Erreur lors de la numerotation des atomes');
     }
   };
 
@@ -136,38 +119,48 @@ const App: React.FC = () => {
     
     if (ketcherComponentRef.current && atomNumbering) {
       try {
-        setStatusMessage('Application de la numérotation personnalisée...');
+        setStatusMessage('Application de la numerotation personnalisee...');
         await ketcherComponentRef.current.addAtomNumbers(numbering);
-        setStatusMessage('Numérotation personnalisée appliquée - Les nouveaux atomes seront numérotés automatiquement');
+        setStatusMessage('Numerotation personnalisee appliquee - Les nouveaux atomes seront numerotes automatiquement');
+        
+        // Actualiser l'overlay des orbitales
+        if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
+          setTimeout(() => ketcherComponentRef.current?.refreshOrbitalOverlay(), 100);
+        }
       } catch (error) {
-        console.error('Erreur lors de l\'application de la numérotation:', error);
-        setStatusMessage('Erreur lors de l\'application de la numérotation');
+        setStatusMessage('Erreur lors de l\'application de la numerotation');
       }
     }
   };
 
-  
+  // Gestion des paramètres Hückel
   const handleHuckelParametersSave = (newParameters: HuckelParameters) => {
     setHuckelParameters(newParameters);
     
-  
     if (huckelCalculatorRef.current) {
       huckelCalculatorRef.current.updateParameters(newParameters);
     }
     
-    setStatusMessage('Paramètres Hückel mis à jour');
-    console.log(' Nouveaux paramètres Hückel:', newParameters);
+    const hXCount = Object.keys(newParameters.hX).length;
+    const hXYCount = Object.keys(newParameters.hXY).length;
+    
+    setStatusMessage(`Parametres Huckel mis a jour: ${hXCount} elements hX, ${hXYCount} liaisons hXY`);
   };
 
+  // Gestion des changements de structure
   const handleStructureChange = useCallback(() => {
     setTimeout(() => {
       if (ketcherComponentRef.current) {
         const atoms = ketcherComponentRef.current.getAtomsInfo();
-        setStatusMessage(`Structure modifiée - ${atoms.length} atome${atoms.length > 1 ? 's' : ''}`);
+        setStatusMessage(`Structure modifiee - ${atoms.length} atome${atoms.length > 1 ? 's' : ''}`);
+        
+        // Réinitialiser la sélection d'orbitale lors d'un changement de structure
+        if (selectedOrbitalIndex >= 0) {
+          setSelectedOrbitalIndex(-1);
+          setStatusMessage('Structure modifiee - Selection d\'orbitale reinitializee');
+        }
         
         if (atomNumbering) {
-          console.log('Numérotation activée - Mise à jour automatique...');
-          
           const currentAtomIds = new Set(atoms.map(atom => atom.id));
           const filteredCustomNumbering: { [atomId: number]: string } = {};
           
@@ -181,63 +174,81 @@ const App: React.FC = () => {
           setCustomNumbering(filteredCustomNumbering);
           
           ketcherComponentRef.current.addAtomNumbers(filteredCustomNumbering)
-            .then(() => {
-              console.log('✓ Numérotation automatique mise à jour');
-            })
-            .catch((error) => {
-              console.error('✗ Erreur lors de la mise à jour automatique:', error);
-              setStatusMessage('Erreur lors de la mise à jour de la numérotation');
+            .catch(() => {
+              setStatusMessage('Erreur lors de la mise a jour de la numerotation');
             });
+        }
+
+        // Actualiser l'overlay des orbitales
+        if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
+          setTimeout(() => ketcherComponentRef.current?.refreshOrbitalOverlay(), 150);
         }
       }
     }, 100);
-  }, [atomNumbering, customNumbering]);
+  }, [atomNumbering, customNumbering, selectedOrbitalIndex]);
 
+  // Basculer la langue
   const toggleLanguage = () => {
     setCurrentLanguage(prev => prev === 'fr' ? 'en' : 'fr');
   };
 
+  // Gestion de la sélection d'orbitales
+  const handleEnergyLevelClick = (index: number) => {
+    if (selectedOrbitalIndex === index) {
+      // Déselectionner si on clique sur la même orbitale
+      setSelectedOrbitalIndex(-1);
+      setStatusMessage('Orbitale deselectionee');
+    } else {
+      // Sélectionner une nouvelle orbitale
+      setSelectedOrbitalIndex(index);
+      const energyLabel = huckelResults?.energyExpressions?.[index] || 
+                         huckelResults?.energies[index]?.toFixed(3) + 'β';
+      const occupation = huckelResults?.occupations[index] || 0;
+      setStatusMessage(`Orbitale ψ${index + 1} selectionnee (E=${energyLabel}, ${occupation} e-)`);
+    }
+    
+    // Actualiser l'overlay des orbitales
+    if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
+      setTimeout(() => ketcherComponentRef.current?.refreshOrbitalOverlay(), 50);
+    }
+  };
+
+  // Calcul Hückel
   const calculateHuckel = async () => {
     if (!ketcherComponentRef.current?.ketcher || !huckelCalculatorRef.current) {
-      setStatusMessage('Erreur: Ketcher non initialisé');
+      setStatusMessage('Erreur: Ketcher non initialise');
       return;
     }
 
     setIsCalculating(true);
-    setStatusMessage('Détection automatique du système π...');
+    setStatusMessage('Detection automatique du systeme pi...');
+    
+    // Réinitialiser la sélection d'orbitale
+    setSelectedOrbitalIndex(-1);
 
     try {
-     
       const results = huckelCalculatorRef.current.calculate(totalCharge);
-      
-      console.log(' SYSTÈME π AVEC PARAMÈTRES ADAPTATIFS:');
-      console.log(` ${results.piAtoms.length} atomes π`);
-      console.log(` Numérotation: ${results.piAtoms.map(a => `${a.element}${a.userNumber}(${a.piElectrons}e⁻)`).join(', ')}`);
-      console.log(` ${results.totalPiElectrons} électrons π`);
-      console.log(' Énergies:', results.energyExpressions);
-      console.log(' Paramètres utilisés:', results.parameters);
-      
       setHuckelResults(results);
       
-      const atomsList = results.piAtoms.map(a => `${a.element}${a.userNumber}(${a.piElectrons}e⁻)`).join(', ');
-      setStatusMessage(`Calcul terminé - Atomes π: ${atomsList} (${results.totalPiElectrons} e⁻, E=${parseFloat(results.totalEnergy.toFixed(3))}β)`);
+      const atomsList = results.piAtoms.map(a => `${a.element}${a.userNumber}(${a.piElectrons}e-)`).join(', ');
+      setStatusMessage(`Calcul termine - Atomes pi: ${atomsList} (${results.totalPiElectrons} e-, E=${parseFloat(results.totalEnergy.toFixed(3))}β)`);
       
     } catch (error) {
-      console.error('Erreur:', error);
       setStatusMessage(error instanceof Error ? error.message : 'Erreur lors du calcul');
     } finally {
       setIsCalculating(false);
     }
   };
 
+  // Calcul de mésomérie
   const calculateMesomery = async () => {
     if (!ketcherComponentRef.current?.ketcher) {
-      setStatusMessage('Erreur: Ketcher non initialisé');
+      setStatusMessage('Erreur: Ketcher non initialise');
       return;
     }
 
     setIsCalculating(true);
-    setStatusMessage('Calcul mésomérie en cours...');
+    setStatusMessage('Calcul mesomerie en cours...');
 
     try {
       const mockResults: MesomeryResults = {
@@ -252,16 +263,16 @@ const App: React.FC = () => {
       setTimeout(() => {
         setMesomeryResults(mockResults);
         setIsCalculating(false);
-        setStatusMessage(`Calcul mésomérie terminé (méthode ${selectedMethod})`);
+        setStatusMessage(`Calcul mesomerie termine (methode ${selectedMethod})`);
       }, 1500);
 
     } catch (error) {
       setIsCalculating(false);
-      setStatusMessage('Erreur lors du calcul mésomérie');
-      console.error('Erreur calcul mésomérie:', error);
+      setStatusMessage('Erreur lors du calcul mesomerie');
     }
   };
 
+  // Effacer tout
   const clearAll = async () => {
     if (ketcherComponentRef.current) {
       await ketcherComponentRef.current.setMolecule('');
@@ -271,34 +282,50 @@ const App: React.FC = () => {
     setTotalCharge(0);
     setAtomNumbering(false);
     setCustomNumbering({});
-    setStatusMessage('Tout effacé - Prêt pour une nouvelle molécule');
+    setSelectedOrbitalIndex(-1); // Réinitialiser la sélection d'orbitale
+    setStatusMessage('Tout efface - Pret pour une nouvelle molecule');
   };
 
+  // Réorganiser les atomes
   const reorderAtoms = async () => {
     if (!ketcherComponentRef.current) {
-      setStatusMessage('Erreur: Ketcher non initialisé');
+      setStatusMessage('Erreur: Ketcher non initialise');
       return;
     }
 
     if (atomNumbering) {
       const atoms = ketcherComponentRef.current.getAtomsInfo();
       if (atoms.length === 0) {
-        setStatusMessage('Aucun atome à numéroter');
+        setStatusMessage('Aucun atome a numeroter');
         return;
       }
       setShowNumberingModal(true);
-      setStatusMessage('Ouverture de la personnalisation de la numérotation...');
+      setStatusMessage('Ouverture de la personnalisation de la numerotation...');
     } else {
-      setStatusMessage('Réorganisation des atomes...');
+      setStatusMessage('Reorganisation des atomes...');
       setTimeout(() => {
-        setStatusMessage('Atomes réorganisés');
+        setStatusMessage('Atomes reorganises');
+        // Actualiser l'overlay des orbitales
+        if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
+          ketcherComponentRef.current.refreshOrbitalOverlay();
+        }
       }, 500);
     }
   };
 
+  // Ouvrir les paramètres Hückel
   const openHuckelParameters = () => {
     setShowHuckelParamsModal(true);
-    setStatusMessage('Configuration des paramètres Hückel...');
+    setStatusMessage('Configuration des parametres Huckel...');
+  };
+
+  // Basculer l'affichage des orbitales
+  const toggleOrbitalVisualization = () => {
+    setShowOrbitalVisualization(prev => !prev);
+    setStatusMessage(showOrbitalVisualization ? 
+      'Visualisation des orbitales desactivee' : 
+      'Visualisation des orbitales activee'
+    );
   };
 
   return (
@@ -332,30 +359,80 @@ const App: React.FC = () => {
 
         <div className="center-zone">
           <div className="center-header">
-            Fenêtre d'Application et orbitales
+            Fenetre d'Application et orbitales
             {huckelResults && (
               <div style={{ 
                 fontSize: '12px', 
                 color: '#666', 
                 marginTop: '4px',
-                fontFamily: 'monospace'
+                fontFamily: 'monospace',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
               }}>
+                <span>
+                  {selectedOrbitalIndex >= 0 ? 
+                    `Orbitale ψ${selectedOrbitalIndex + 1} affichée` : 
+                    'Cliquez sur un niveau énergétique'}
+                </span>
+                <button
+                  onClick={toggleOrbitalVisualization}
+                  style={{
+                    fontSize: '10px',
+                    padding: '2px 6px',
+                    backgroundColor: showOrbitalVisualization ? '#007bff' : '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                  title={showOrbitalVisualization ? 'Masquer les orbitales' : 'Afficher les orbitales'}
+                >
+                  {showOrbitalVisualization ? '👁️ ON' : '👁️ OFF'}
+                </button>
+                {showOrbitalVisualization && selectedOrbitalIndex >= 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ fontSize: '10px' }}>Échelle:</span>
+                    <input
+                      type="range"
+                      min="20"
+                      max="100"
+                      value={orbitalScale}
+                      onChange={(e) => {
+                        setOrbitalScale(parseInt(e.target.value));
+                        // Actualiser l'overlay après changement d'échelle
+                        if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
+                          setTimeout(() => ketcherComponentRef.current?.refreshOrbitalOverlay(), 50);
+                        }
+                      }}
+                      style={{ width: '60px' }}
+                    />
+                    <span style={{ fontSize: '10px' }}>{orbitalScale}%</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
+          
           <div className="molecule-display">
             <div className="ketcher-container">
               <KetcherComponent 
                 ref={ketcherComponentRef}
                 onInit={handleKetcherInit}
                 onStructureChange={handleStructureChange}
+                // Nouvelles props pour les orbitales
+                huckelResults={huckelResults}
+                selectedOrbitalIndex={selectedOrbitalIndex}
+                showOrbitals={showOrbitalVisualization}
+                orbitalScale={orbitalScale}
               />
             </div>
+            
             <OrbitalDiagram 
               results={huckelResults}
-              onEnergyLevelClick={(index) => {
-                setStatusMessage(`Niveau énergétique ${index + 1} sélectionné`);
-              }}
+              onEnergyLevelClick={handleEnergyLevelClick}
+              selectedOrbitalIndex={selectedOrbitalIndex}
+              showOrbitalVisualization={showOrbitalVisualization}
             />
           </div>
         </div>
@@ -369,37 +446,34 @@ const App: React.FC = () => {
           onStructureSelect={setSelectedStructure}
           onCalculate={calculateMesomery}
           onShowResults={() => setShowMesomeryPopup(true)}
-          onGenerateAll={() => setStatusMessage('Génération de toutes les structures...')}
-          onCreateStructure={() => setStatusMessage('Création d\'une nouvelle structure...')}
-          onDeleteCurrent={() => setStatusMessage('Structure supprimée')}
-          onDeleteAll={() => setStatusMessage('Toute la mésomérie supprimée')}
+          onGenerateAll={() => setStatusMessage('Generation de toutes les structures...')}
+          onCreateStructure={() => setStatusMessage('Creation d\'une nouvelle structure...')}
+          onDeleteCurrent={() => setStatusMessage('Structure supprimee')}
+          onDeleteAll={() => setStatusMessage('Toute la mesomerie supprimee')}
           isCalculating={isCalculating}
         />
 
         <StatusBar message={statusMessage} />
       </div>
 
-      {/* Popup des résultats Hückel */}
       {showHuckelPopup && (
         <ResultsPopup
-          title="Résultats Hückel"
+          title="Resultats Huckel"
           type="huckel"
           results={huckelResults}
           onClose={() => setShowHuckelPopup(false)}
         />
       )}
 
-      {/* Popup des résultats Mésomérie */}
       {showMesomeryPopup && (
         <ResultsPopup
-          title="Résultats Mésomérie"
+          title="Resultats Mesomerie"
           type="mesomery"
           results={mesomeryResults}
           onClose={() => setShowMesomeryPopup(false)}
         />
       )}
 
-      {/* Modal de numérotation des atomes */}
       {showNumberingModal && (
         <AtomNumberingModal
           isOpen={showNumberingModal}
@@ -410,20 +484,18 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* NOUVEAU: Modal de configuration des paramètres Hückel */}
       {showHuckelParamsModal && (
         <HuckelParametersModal
           isOpen={showHuckelParamsModal}
           currentParameters={huckelParameters}
           onClose={() => {
             setShowHuckelParamsModal(false);
-            setStatusMessage('Configuration des paramètres fermée');
+            setStatusMessage('Configuration des parametres fermee');
           }}
           onSave={handleHuckelParametersSave}
         />
       )}
 
-      {/* Indicateur de calcul */}
       {isCalculating && (
         <div className="calculating">
           <div className="spinner"></div>

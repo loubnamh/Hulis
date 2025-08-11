@@ -1,3 +1,5 @@
+// OrbitalDiagram.tsx - Version améliorée avec visualisation
+
 import React from 'react';
 
 interface HuckelResults {
@@ -12,11 +14,15 @@ interface HuckelResults {
 interface OrbitalDiagramProps {
   results: HuckelResults | null;
   onEnergyLevelClick?: (index: number) => void;
+  selectedOrbitalIndex?: number; // Nouvel prop pour l'orbitale sélectionnée
+  showOrbitalVisualization?: boolean; // Contrôle l'affichage des orbitales
 }
 
 const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({ 
   results, 
-  onEnergyLevelClick 
+  onEnergyLevelClick,
+  selectedOrbitalIndex = -1,
+  showOrbitalVisualization = false
 }) => {
 
   const renderPiSystemInfo = () => {
@@ -41,6 +47,21 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
         <div>
            {results.totalPiElectrons} électrons π
         </div>
+        {selectedOrbitalIndex >= 0 && (
+          <div style={{ 
+            marginTop: '6px', 
+            padding: '4px',
+            backgroundColor: '#e6f3ff',
+            borderRadius: '3px',
+            fontSize: '10px'
+          }}>
+            <strong>Orbitale sélectionnée:</strong> ψ{selectedOrbitalIndex + 1}
+            <br />
+            <strong>Énergie:</strong> {results.energyExpressions?.[selectedOrbitalIndex] || results.energies[selectedOrbitalIndex]?.toFixed(3)}
+            <br />
+            <strong>Occupation:</strong> {results.occupations[selectedOrbitalIndex]} électron(s)
+          </div>
+        )}
       </div>
     );
   };
@@ -71,6 +92,57 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
     return lumoIndex;
   };
 
+  const renderCoefficientsTable = () => {
+    if (!results?.coefficients || selectedOrbitalIndex < 0) return null;
+
+    const coefficients = results.coefficients[selectedOrbitalIndex];
+    
+    return (
+      <div style={{
+        marginTop: '15px',
+        padding: '10px',
+        backgroundColor: '#f9f9f9',
+        borderRadius: '6px',
+        border: '1px solid #ddd'
+      }}>
+        <div style={{ 
+          fontWeight: 'bold', 
+          marginBottom: '8px', 
+          fontSize: '12px',
+          color: '#333'
+        }}>
+          Coefficients ψ{selectedOrbitalIndex + 1}:
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))',
+          gap: '4px',
+          fontSize: '10px'
+        }}>
+          {coefficients.map((coeff, i) => (
+            <div key={i} style={{
+              textAlign: 'center',
+              padding: '3px',
+              backgroundColor: Math.abs(coeff) > 0.3 ? '#e6f3ff' : '#fff',
+              border: '1px solid #ccc',
+              borderRadius: '3px'
+            }}>
+              <div style={{ fontWeight: 'bold' }}>
+                {results.piAtoms?.[i]?.element}{results.piAtoms?.[i]?.userNumber}
+              </div>
+              <div style={{ 
+                color: coeff > 0 ? '#d63384' : '#0d6efd',
+                fontFamily: 'monospace'
+              }}>
+                {coeff.toFixed(3)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const renderEnergyLevels = () => {
     if (!results || !results.energies.length) {
       return (
@@ -79,15 +151,13 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
           marginTop: '120px', 
           color: '#666'
         }}>
+          Aucun calcul disponible
         </p>
       );
     }
 
     const { energies, occupations } = results;
     const numOrbitals = energies.length;
-    
-    console.log('🔍 Énergies reçues:', energies);
-    console.log('🔍 Occupations reçues:', occupations);
     
     const minHeight = 300;
     const heightPerOrbital = Math.max(25, 400 / numOrbitals);
@@ -114,8 +184,6 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
         energyGroups[energy.toString()] = [index];
       }
     });
-
-    console.log('🔍 Groupes d\'énergies dégénérées:', energyGroups);
 
     const positions = energies.map((energy, index) => {
       const displayEnergy = -energy;
@@ -146,6 +214,7 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
       degenerateGroup.forEach((orbitalIndex, positionInGroup) => {
         const isHOMO = orbitalIndex === getHOMOIndex(occupations, energies);
         const isLUMO = orbitalIndex === getLUMOIndex(occupations, energies);
+        const isSelected = orbitalIndex === selectedOrbitalIndex;
 
         let leftPos, widthPercent, topOffset = 0;
         
@@ -170,56 +239,59 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
           widthPercent = `${spacing * 0.8}%`;
         }
 
-        console.log(`🎯 Orbitale ψ${orbitalIndex + 1}: énergie=${energy}, groupe=${groupSize}, position=${positionInGroup}`);
-
         energyLevels.push(
           <div
             key={orbitalIndex}
-            className={`energy-level ${isHOMO ? 'homo' : ''} ${isLUMO ? 'lumo' : ''}`}
+            className={`energy-level ${isHOMO ? 'homo' : ''} ${isLUMO ? 'lumo' : ''} ${isSelected ? 'selected' : ''}`}
             style={{
               position: 'absolute',
               top: `${top + topOffset}px`,
               width: widthPercent,
               left: leftPos,
-              height: '2px',
+              height: isSelected ? '4px' : '2px',
+              backgroundColor: isSelected ? '#007bff' : (isHOMO ? '#ff6600' : isLUMO ? '#0066ff' : '#333'),
               cursor: 'pointer',
-              zIndex: 2
+              zIndex: isSelected ? 3 : 2,
+              boxShadow: isSelected ? '0 0 8px rgba(0,123,255,0.6)' : 'none',
+              transition: 'all 0.2s ease'
             }}
             onClick={() => onEnergyLevelClick && onEnergyLevelClick(orbitalIndex)}
             title={`Niveau ${orbitalIndex + 1}: ${results?.energyExpressions?.[orbitalIndex] || energy.toFixed(3)}${isHOMO ? ' (HOMO)' : isLUMO ? ' (LUMO)' : ''}`}
           >
-            {/* Énergie à gauche (seulement pour le premier du groupe) */}
+            {/* Énergie à gauche */}
             {positionInGroup === 0 && (
               <div className="energy-label" style={{
                 position: 'absolute',
                 right: groupSize > 1 ? '108%' : '102%',
                 top: '-8px',
                 fontSize: Math.max(8, 12 - numOrbitals / 4) + 'px',
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
+                fontWeight: isSelected ? 'bold' : 'normal',
+                color: isSelected ? '#007bff' : '#333'
               }}>
                 {results?.energyExpressions?.[orbitalIndex] || energy.toFixed(2)}
                 {groupSize > 1 && <span style={{ fontSize: '7px', color: '#999' }}> (×{groupSize})</span>}
               </div>
             )}
             
-            {/* Label orbital sous la ligne */}
+            {/* Label orbital */}
             <div style={{
               position: 'absolute',
               left: '50%',
               top: '5px',
               transform: 'translateX(-50%)',
               fontSize: Math.max(7, 10 - numOrbitals / 6) + 'px',
-              color: '#333',
-              fontWeight: 'bold',
+              color: isSelected ? '#007bff' : '#333',
+              fontWeight: isSelected ? 'bold' : 'bold',
               background: 'white',
               padding: '1px 2px',
-              border: '1px solid #ccc',
+              border: isSelected ? '2px solid #007bff' : '1px solid #ccc',
               borderRadius: '2px'
             }}>
               ψ{orbitalIndex + 1}
             </div>
             
-            {/* Électrons au centre */}
+            {/* Électrons */}
             <div 
               className="electron-box"
               style={{
@@ -228,13 +300,15 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
                 top: '-10px',
                 transform: 'translateX(-50%)',
                 fontSize: Math.max(8, 11 - numOrbitals / 8) + 'px',
-                fontFamily: 'monospace'
+                fontFamily: 'monospace',
+                fontWeight: isSelected ? 'bold' : 'normal',
+                color: isSelected ? '#007bff' : '#333'
               }}
             >
               {renderElectrons(occupations[orbitalIndex])}
             </div>
             
-            {/* Labels HOMO/LUMO à droite (seulement pour le dernier du groupe) */}
+            {/* Labels HOMO/LUMO */}
             {positionInGroup === groupSize - 1 && (
               <div style={{
                 position: 'absolute',
@@ -286,7 +360,7 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
       }}>
         {energyLevels}
         
-        {/* LIGNE VERTICALE ENTRE MIN ET MAX */}
+        {/* Ligne verticale centrale */}
         {energies.length > 1 && (
           <div style={{
             position: 'absolute',
@@ -300,7 +374,7 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
           }} />
         )}
         
-        {/* LIGNE DE RÉFÉRENCE α */}
+        {/* Ligne de référence α */}
         <div style={{
           position: 'absolute',
           top: `${20 + diagramHeight * 0.5}px`,
@@ -313,7 +387,7 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
           zIndex: 1
         }} />
         
-        {/* LABEL α */}
+        {/* Label α */}
         <div style={{
           position: 'absolute',
           top: `${20 + diagramHeight * 0.5}px`,
@@ -344,14 +418,30 @@ const OrbitalDiagram: React.FC<OrbitalDiagramProps> = ({
     <div className="orbital-diagram" style={{ overflowY: 'auto', maxHeight: '600px' }}>
       <h4 style={{ textAlign: 'center', marginBottom: '10px', fontSize: '13px' }}>
         Diagramme énergétique
+        {showOrbitalVisualization && selectedOrbitalIndex >= 0 && (
+          <span style={{ 
+            display: 'block', 
+            fontSize: '10px', 
+            color: '#007bff',
+            marginTop: '2px'
+          }}>
+            Orbitale visualisée dans l'éditeur
+          </span>
+        )}
       </h4>
       
       {renderPiSystemInfo()}
       
       {renderEnergyLevels()}
       
+      {renderCoefficientsTable()}
+      
       <div style={{ fontSize: '10px', color: '#666', marginTop: '10px', textAlign: 'center' }}>
-        {results ? 'Cliquez sur un niveau pour voir l\'orbitale' : ''}
+        {results ? (
+          selectedOrbitalIndex >= 0 ? 
+            'Cliquez sur un autre niveau ou re-cliquez pour désélectionner' :
+            'Cliquez sur un niveau pour voir l\'orbitale'
+        ) : ''}
       </div>
     </div>
   );

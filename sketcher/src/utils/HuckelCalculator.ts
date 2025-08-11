@@ -1,16 +1,17 @@
 import { EigenvalueDecomposition, Matrix } from 'ml-matrix';
+import { 
+  HuckelParameters, 
+  DEFAULT_HUCKEL_PARAMETERS, 
+  ADAPTIVE_ELEMENTS,
+  getAdaptiveHX,
+  getAdaptiveHXY
+} from './HuckelParametersConfig';
 
 export interface PiAtom {
   id: number;
   element: string;
   piElectrons: number;
   userNumber: string; 
-}
-
-export interface HuckelParameters {
-  hX: { [element: string]: number };
-  
-  hXY: { [bondType: string]: number };
 }
 
 export class HuckelCalculator {
@@ -22,45 +23,12 @@ export class HuckelCalculator {
     this.ketcher = ketcher;
     this.ketcherComponentRef = ketcherComponentRef;
     
-    const defaultParameters: HuckelParameters = {
-     hX: {
-      'C': 0.0,
-      'N': 1.37,    // 2 e⁻π par défaut
-      'O': 2.09,    // 2 e⁻π par défaut
-      'S': 1.11,    // 2 e⁻π par défaut 
-      'P': 0.75,    // 2 e⁻π par défaut 
-      'Cl': 2.0,
-      'Br': 1.48,
-      'F': 2.71,
-      'B': -0.45,
-      'Si': 0
-    },
-    hXY: {
-      'C-C': 1.0,
-      'C-N': 0.89,  // 2 e⁻π par défaut
-      'N-N': 0.98,
-      'C-O': 0.66,  // 2 e⁻π par défaut 
-      'C-S': 0.69,  // 2 e⁻π par défaut 
-      'C-P': 0.76,  // 2 e⁻π par défaut 
-      'C-Cl': 0.4,
-      'C-Br': 0.62,
-      'C-F': 0.52,
-      'C-B': 0.73,
-      'C-Si': 0.75,
-      'N-O': 0.6,
-      'O-O': 0.6,
-      'S-S': 0.5,
-      'P-P': 0.5
-    }
-    };
-
     this.parameters = {
-      hX: { ...defaultParameters.hX, ...customParameters?.hX },
-      hXY: { ...defaultParameters.hXY, ...customParameters?.hXY }
+      hX: { ...DEFAULT_HUCKEL_PARAMETERS.hX, ...customParameters?.hX },
+      hXY: { ...DEFAULT_HUCKEL_PARAMETERS.hXY, ...customParameters?.hXY }
     };
   }
 
- 
   updateParameters(newParameters: Partial<HuckelParameters>): void {
     if (newParameters.hX) {
       this.parameters.hX = { ...this.parameters.hX, ...newParameters.hX };
@@ -68,29 +36,10 @@ export class HuckelCalculator {
     if (newParameters.hXY) {
       this.parameters.hXY = { ...this.parameters.hXY, ...newParameters.hXY };
     }
-    
-    console.log('📝 Paramètres Hückel mis à jour:');
-    this.printCurrentParameters();
   }
 
   getCurrentParameters(): HuckelParameters {
     return { ...this.parameters };
-  }
-
-  printCurrentParameters(): void {
-    console.log('\n📋 Paramètres hX (correction α):');
-    Object.entries(this.parameters.hX).forEach(([element, value]) => {
-      if (value === 0) {
-        console.log(`  ${element}: α`);
-      } else {
-        console.log(`  ${element}: α ${value > 0 ? '+' : ''}${value}β`);
-      }
-    });
-    
-    console.log('\n📋 Paramètres hXY (correction β):');
-    Object.entries(this.parameters.hXY).forEach(([bondType, value]) => {
-      console.log(`  ${bondType}: ${value}β`);
-    });
   }
 
   private formatNumber(value: number): string {
@@ -99,48 +48,14 @@ export class HuckelCalculator {
   }
 
   private getHX(element: string, piElectrons?: number): number {
-    if (element === 'N') {
-      return piElectrons === 1 ? 0.51 : 1.37; 
-    }
-    if (element === 'O') {
-      return piElectrons === 1 ? 0.97 : 2.09;
-    }
-    if (element === 'S') {
-      return piElectrons === 1 ? 0.46 : 1.11; // 1 e⁻: 0.46, 2 e⁻: 1.11
-    }
-    if (element === 'P') {
-      return piElectrons === 1 ? 0.19 : 0.75; // 1 e⁻: 0.19, 2 e⁻: 0.75
+    if (ADAPTIVE_ELEMENTS.includes(element) && piElectrons) {
+      return getAdaptiveHX(element, piElectrons);
     }
     return this.parameters.hX[element] || 0.0;
   }
 
   private getHXY(element1: string, element2: string, piElectrons1?: number, piElectrons2?: number): number {
-    
-    const key1 = `${element1}-${element2}`;
-    const key2 = `${element2}-${element1}`;
-    
-    
-    if ((element1 === 'C' && element2 === 'N') || (element1 === 'N' && element2 === 'C')) {
-      const nElectrons = element1 === 'N' ? piElectrons1 : piElectrons2;
-      return nElectrons === 1 ? 1.02 : 0.89; 
-    }
-    
-    if ((element1 === 'C' && element2 === 'O') || (element1 === 'O' && element2 === 'C')) {
-      const oElectrons = element1 === 'O' ? piElectrons1 : piElectrons2;
-      return oElectrons === 1 ? 1.06 : 0.66;
-    }
-    
-    if ((element1 === 'C' && element2 === 'S') || (element1 === 'S' && element2 === 'C')) {
-      const sElectrons = element1 === 'S' ? piElectrons1 : piElectrons2;
-      return sElectrons === 1 ? 0.81 : 0.69; // 1 e⁻: 0.81, 2 e⁻: 0.69
-    }
-    
-    if ((element1 === 'C' && element2 === 'P') || (element1 === 'P' && element2 === 'C')) {
-      const pElectrons = element1 === 'P' ? piElectrons1 : piElectrons2;
-      return pElectrons === 1 ? 0.77 : 0.76; // 1 e⁻: 0.77, 2 e⁻: 0.76
-    }
-    
-    return this.parameters.hXY[key1] || this.parameters.hXY[key2] || 1.0;
+    return getAdaptiveHXY(element1, element2, piElectrons1, piElectrons2, this.parameters);
   }
 
   private getUserAtomNumber(atomId: number, atomIndex: number): string {
@@ -178,8 +93,6 @@ export class HuckelCalculator {
     const bonds = struct.bonds;
     const piAtoms: PiAtom[] = [];
 
-    console.log('=== DÉTECTION SYSTÈME π (PARAMÈTRES CONFIGURABLES) ===');
-
     let atomIndex = 0;
     atoms.forEach((atom: any, atomId: number) => {
       if (!atom || !atom.pp) return;
@@ -193,13 +106,8 @@ export class HuckelCalculator {
       const userNumber = this.getUserAtomNumber(atomId, atomIndex);
       const atomBonds = this.getAtomBonds(atomId, bonds);
       
-      console.log(`\n🔍 ${element}${userNumber}:`);
-      
       if (this.isInPiSystem(atomBonds, element)) {
         const piElectrons = this.getStandardPiElectrons(element, atomBonds);
-        const hX = this.getHX(element, piElectrons);
-        
-        console.log(`  hX = ${this.formatNumber(hX)} (α ${hX > 0 ? '+' : ''}${this.formatNumber(hX)}β) [${piElectrons} e⁻π]`);
         
         piAtoms.push({
           id: atomId,
@@ -207,10 +115,6 @@ export class HuckelCalculator {
           piElectrons,
           userNumber 
         });
-        
-        console.log(`   ${piElectrons} e⁻π`);
-      } else {
-        console.log(`  Exclu`);
       }
       
       atomIndex++;
@@ -225,8 +129,6 @@ export class HuckelCalculator {
       }
       return a.userNumber.localeCompare(b.userNumber);
     });
-
-    console.log(`\n Système π: ${piAtoms.length} atomes, ${piAtoms.reduce((sum, atom) => sum + atom.piElectrons, 0)} e⁻π`);
     
     return piAtoms;
   }
@@ -251,62 +153,48 @@ export class HuckelCalculator {
   private getStandardPiElectrons(element: string, bonds: any[]): number {
     switch (element) {
       case 'C':
-       
         return 1;
       
       case 'N':
-       
         const hasDoubleBond = bonds.some(bond => bond.type === 2);
         const hasTripleBond = bonds.some(bond => bond.type === 3);
-        const isAromatic = bonds.some(bond => bond.type === 4); 
+        const isAromatic = bonds.some(bond => bond.type === 4);
         
         if (hasTripleBond) {
-         
           return 2;
         } else if (hasDoubleBond || isAromatic) {
-          
           return 1;
         } else {
-         
           return 2;
         }
       
       case 'O':
-
         const oHasDoubleBond = bonds.some(bond => bond.type === 2);
         const oIsAromatic = bonds.some(bond => bond.type === 4);
         
         if (oHasDoubleBond || oIsAromatic) {
-         
           return 1;
         } else {
-          
           return 2;
         }
       
       case 'S':
-        
         const sHasDoubleBond = bonds.some(bond => bond.type === 2);
         const sIsAromatic = bonds.some(bond => bond.type === 4);
         
         if (sHasDoubleBond || sIsAromatic) {
-         
           return 1;
         } else {
-         
           return 2;
         }
       
       case 'P':
-       
         const pHasDoubleBond = bonds.some(bond => bond.type === 2);
         const pIsAromatic = bonds.some(bond => bond.type === 4);
         
         if (pHasDoubleBond || pIsAromatic) {
-         
           return 1;
         } else {
-          
           return 2;
         }
       
@@ -315,12 +203,9 @@ export class HuckelCalculator {
     }
   }
 
- 
   private buildHamiltonianMatrix(piAtoms: PiAtom[]): number[][] {
     const n = piAtoms.length;
     const matrix = Array(n).fill(null).map(() => Array(n).fill(0));
-    
-    console.log('🔧 Construction matrice hamiltonienne...');
     
     const struct = this.ketcher.editor.struct();
     const bonds = struct.bonds;
@@ -330,21 +215,12 @@ export class HuckelCalculator {
       atomIdToIndex.set(atom.id, index);
     });
     
-   
     for (let i = 0; i < n; i++) {
       const element = piAtoms[i].element;
       const piElectrons = piAtoms[i].piElectrons;
       const hX = this.getHX(element, piElectrons);
-      
       matrix[i][i] = hX;
-      
-      if (hX === 0) {
-        console.log(`  H(${piAtoms[i].element}${piAtoms[i].userNumber},${piAtoms[i].element}${piAtoms[i].userNumber}) = α`);
-      } else {
-        console.log(`  H(${piAtoms[i].element}${piAtoms[i].userNumber},${piAtoms[i].element}${piAtoms[i].userNumber}) = α ${hX > 0 ? '+' : ''}${this.formatNumber(hX)}β [${piElectrons} e⁻π]`);
-      }
     }
-    
     
     bonds.forEach((bond: any) => {
       const i = atomIdToIndex.get(bond.begin);
@@ -359,20 +235,13 @@ export class HuckelCalculator {
         
         matrix[i][j] = hXY;
         matrix[j][i] = hXY;
-        
-        console.log(`  H(${element1}${piAtoms[i].userNumber},${element2}${piAtoms[j].userNumber}) = ${this.formatNumber(hXY)}β [${element1}:${piElectrons1}e⁻, ${element2}:${piElectrons2}e⁻]`);
       }
     });
-    
-    console.log('\n Matrice hamiltonienne H (en unités de β):');
-    this.printMatrix(matrix, piAtoms);
     
     return matrix;
   }
 
   private diagonalizeMatrix(matrix: number[][]): { eigenvalues: number[]; eigenvectors: number[][] } {
-    console.log(' Diagonalisation...');
-    
     try {
       const mlMatrix = new Matrix(matrix);
       const evd = new EigenvalueDecomposition(mlMatrix);
@@ -389,28 +258,21 @@ export class HuckelCalculator {
         eigenvectors.push(eigenvector);
       }
       
-      console.log(' Diagonalisation réussie');
       return { eigenvalues, eigenvectors };
       
     } catch (error) {
-      console.error(' Erreur diagonalisation:', error);
-      throw new Error('Échec de la diagonalisation');
+      throw new Error('Echec de la diagonalisation');
     }
   }
 
   calculate(totalCharge: number = 0) {
-    console.log('\n=== CALCUL D\'HÜCKEL AVEC PARAMÈTRES CONFIGURABLES ===');
-    this.printCurrentParameters();
-    
     const piAtoms = this.detectPiAtoms();
     if (piAtoms.length === 0) {
-      throw new Error('Aucun système π détecté');
+      throw new Error('Aucun systeme pi detecte');
     }
 
     let totalPiElectrons = piAtoms.reduce((sum, atom) => sum + atom.piElectrons, 0);
     totalPiElectrons -= totalCharge;
-    
-    console.log(` ${totalPiElectrons} électrons π total`);
 
     const hamiltonianMatrix = this.buildHamiltonianMatrix(piAtoms);
     const diagonalizationResult = this.diagonalizeMatrix(hamiltonianMatrix);
@@ -428,32 +290,8 @@ export class HuckelCalculator {
     const expressions = this.generateEnergyExpressions(eigenvalues);
     const occupations = this.calculateOccupations(eigenvalues, totalPiElectrons);
     const totalEnergy = this.calculateTotalEnergy(eigenvalues, occupations);
-
-    console.log('\n RÉSULTATS:');
-    console.log(` Système: ${piAtoms.map(a => `${a.element}${a.userNumber}`).join('-')}`);
-    console.log(` ${totalPiElectrons} électrons π`);
-    console.log(` Énergie totale π: ${this.formatNumber(totalEnergy)}β`);
     
-    console.log('\n Énergies des orbitales:');
-    expressions.forEach((expr, i) => {
-      const occ = occupations[i];
-      const occStr = occ === 2 ? '(occupée, 2 e⁻)' : 
-                     occ === 1 ? '(semi-occupée, 1 e⁻)' : 
-                     '(vacante, 0 e⁻)';
-      console.log(`  ψ${i + 1}: ${expr} ${occStr}`);
-    });
-    
-    console.log('\n Coefficients des orbitales:');
-    console.log('Atome    ' + eigenvalues.map((_, i) => `ψ${i + 1}`.padStart(10)).join(''));
-    piAtoms.forEach((atom, atomIndex) => {
-      const row = `${atom.element}${atom.userNumber}`.padEnd(8);
-      const coeffs = coefficients.map(orbCoeffs => 
-        orbCoeffs[atomIndex].toFixed(4).padStart(10)
-      ).join('');
-      console.log(`${row} ${coeffs}`);
-    });
-    
-    return {
+    const results = {
       energies: eigenvalues,
       coefficients,
       occupations,
@@ -461,8 +299,11 @@ export class HuckelCalculator {
       totalPiElectrons,
       energyExpressions: expressions,
       totalEnergy,
+      hamiltonianMatrix: hamiltonianMatrix,
       parameters: this.getCurrentParameters()
     };
+    
+    return results;
   }
 
   private generateEnergyExpressions(eigenvalues: number[]): string[] {
@@ -500,14 +341,5 @@ export class HuckelCalculator {
       totalEnergy += eigenvalues[i] * occupations[i];
     }
     return totalEnergy;
-  }
-
-  private printMatrix(matrix: number[][], piAtoms: PiAtom[]) {
-    console.log('      ', piAtoms.map(a => `${a.element}${a.userNumber}`.padStart(8)).join(''));
-    matrix.forEach((row, i) => {
-      const rowLabel = `${piAtoms[i].element}${piAtoms[i].userNumber}`.padStart(5);
-      const rowValues = row.map(val => this.formatNumber(val).padStart(8)).join('');
-      console.log(`${rowLabel} ${rowValues}`);
-    });
   }
 }

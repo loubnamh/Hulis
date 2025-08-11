@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
-interface HuckelParameters {
-  hX: { [element: string]: number };
-  hXY: { [bondType: string]: number };
-}
+import { HuckelParameters, DEFAULT_HUCKEL_PARAMETERS, ADAPTIVE_ELEMENTS } from '../utils/HuckelParametersConfig';
 
 interface HuckelParametersModalProps {
   isOpen: boolean;
@@ -44,7 +40,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
   };
 
   const addNewElement = () => {
-    const element = prompt('Entrez le symbole de l\'élément (ex: Cl, Br, I):');
+    const element = prompt('Entrez le symbole de l\'element (ex: Cl, Br, I):');
     if (element && element.trim()) {
       const cleanElement = element.trim().charAt(0).toUpperCase() + element.trim().slice(1).toLowerCase();
       if (!parameters.hX[cleanElement]) {
@@ -69,39 +65,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
   };
 
   const resetToDefaults = () => {
-    // Nouveaux paramètres par défaut avec S et P adaptatifs
-    const defaultParameters: HuckelParameters = {
-     hX: {
-      'C': 0.0,
-      'N': 1.37,    // 2 e⁻π par défaut
-      'O': 2.09,    // 2 e⁻π par défaut
-      'S': 1.11,    // 2 e⁻π par défaut 
-      'P': 0.75,    // 2 e⁻π par défaut 
-      'Cl': 2.0,
-      'Br': 1.48,
-      'F': 2.71,
-      'B': -0.45,
-      'Si': 0
-    },
-    hXY: {
-      'C-C': 1.0,
-      'C-N': 0.89,  // 2 e⁻π par défaut
-      'N-N': 0.98,
-      'C-O': 0.66,  // 2 e⁻π par défaut 
-      'C-S': 0.69,  // 2 e⁻π par défaut 
-      'C-P': 0.76,  // 2 e⁻π par défaut 
-      'C-Cl': 0.4,
-      'C-Br': 0.62,
-      'C-F': 0.52,
-      'C-B': 0.73,
-      'C-Si': 0.75,
-      'N-O': 0.6,
-      'O-O': 0.6,
-      'S-S': 0.5,
-      'P-P': 0.5
-    }
-    };
-    setParameters(defaultParameters);
+    setParameters(DEFAULT_HUCKEL_PARAMETERS);
   };
 
   const handleSave = () => {
@@ -111,42 +75,84 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
 
   const getElementInfo = (element: string) => {
     if (element === 'N') {
-      return ' Adaptatif: 2e⁻π=1.37, 1e⁻π=0.51';
+      return 'Adaptatif: 2e-pi=1.37, 1e-pi=0.51';
     }
     if (element === 'O') {
-      return ' Adaptatif: 2e⁻π=2.09, 1e⁻π=0.97';
+      return 'Adaptatif: 2e-pi=2.09, 1e-pi=0.97';
     }
     if (element === 'S') {
-      return ' Adaptatif: 2e⁻π=1.11, 1e⁻π=0.46';
+      return 'Adaptatif: 2e-pi=1.11, 1e-pi=0.46';
     }
     if (element === 'P') {
-      return ' Adaptatif: 2e⁻π=0.75, 1e⁻π=0.19';
+      return 'Adaptatif: 2e-pi=0.75, 1e-pi=0.19';
     }
     return '';
   };
 
   const getBondInfo = (bondType: string) => {
     if (bondType === 'C-N') {
-      return ' Adaptatif: N(2e⁻)=0.89, N(1e⁻)=1.02';
+      return 'Adaptatif: N(2e-)=0.89, N(1e-)=1.02';
     }
     if (bondType === 'C-O') {
-      return ' Adaptatif: O(2e⁻)=0.66, O(1e⁻)=1.06';
+      return 'Adaptatif: O(2e-)=0.66, O(1e-)=1.06';
     }
     if (bondType === 'C-S') {
-      return ' Adaptatif: S(2e⁻)=0.69, S(1e⁻)=0.81';
+      return 'Adaptatif: S(2e-)=0.69, S(1e-)=0.81';
     }
     if (bondType === 'C-P') {
-      return ' Adaptatif: P(2e⁻)=0.76, P(1e⁻)=0.77';
+      return 'Adaptatif: P(2e-)=0.76, P(1e-)=0.77';
     }
     return '';
   };
 
   const isAdaptiveElement = (element: string): boolean => {
-    return ['N', 'O', 'S', 'P'].includes(element);
+    return ADAPTIVE_ELEMENTS.includes(element);
   };
 
   const isAdaptiveBond = (bondType: string): boolean => {
-    return ['C-N', 'C-O', 'C-S', 'C-P'].includes(bondType);
+    const adaptiveBonds = [
+      'C-N', 'C-N2', 'C-O', 'C-O2', 'C-S', 'C-S2', 'C-P', 'C-P2',
+      'B-N', 'B-N2', 'B-O', 'B-O2', 'B-P', 'B-P2', 'B-S', 'B-S2'
+    ];
+    return adaptiveBonds.includes(bondType);
+  };
+
+  const getBondCategory = (bondType: string): string => {
+    if (bondType.includes('C-')) return 'Carbone';
+    if (bondType.includes('B-')) return 'Bore';
+    if (bondType.includes('N') && !bondType.includes('C-N')) return 'Azote';
+    if (bondType.includes('O') && !bondType.includes('C-O')) return 'Oxygene';
+    if (bondType.includes('P') && !bondType.includes('C-P')) return 'Phosphore';
+    if (bondType.includes('S') && !bondType.includes('C-S')) return 'Soufre';
+    if (bondType.includes('F')) return 'Fluor';
+    if (bondType.includes('Si')) return 'Silicium';
+    if (bondType.includes('Cl') || bondType.includes('Br')) return 'Halogenes';
+    return 'Autres';
+  };
+
+  const groupParametersByCategory = (params: { [key: string]: number }) => {
+    const groups: { [category: string]: { [key: string]: number } } = {};
+    
+    Object.entries(params).forEach(([key, value]) => {
+      const category = getBondCategory(key);
+      if (!groups[category]) groups[category] = {};
+      groups[category][key] = value;
+    });
+    
+    return groups;
+  };
+
+  const validateParameterSet = () => {
+    const requiredAdaptive = ['C-N', 'C-N2', 'C-O', 'C-O2', 'C-S', 'C-S2', 'C-P', 'C-P2'];
+    const missing = requiredAdaptive.filter(key => !parameters.hXY[key]);
+    
+    if (missing.length > 0) {
+      alert(`Parametres adaptatifs manquants: ${missing.join(', ')}`);
+      return false;
+    }
+    
+    alert('Tous les parametres adaptatifs sont presents');
+    return true;
   };
 
   if (!isOpen) return null;
@@ -154,51 +160,49 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
   return (
     <div className="modal-overlay">
       <div className="modal-container huckel-params-modal">
-        {/* Header */}
         <div className="modal-header huckel-header-style">
           <div>
-            <h3>⚙️ Paramètres Hückel Adaptatifs</h3>
-            <div className="header-subtitle">Configuration des paramètres hX (α) et hXY (β) - Auto-ajustement selon e⁻π</div>
+            <h3>Parametres Huckel Adaptatifs</h3>
+            <div className="header-subtitle">Configuration des parametres hX (α) et hXY (β) - Auto-ajustement selon e-pi</div>
           </div>
           <button 
             onClick={onClose}
             className="close-button"
           >
-            ✕
+            ×
           </button>
         </div>
 
-        
-        {/* Tabs */}
+       
+
         <div className="param-tabs">
           <button
             onClick={() => setActiveTab('hX')}
             className={`param-tab ${activeTab === 'hX' ? 'active' : ''}`}
           >
-            🔬 Paramètres hX (éléments)
+            Parametres hX (elements)
           </button>
           <button
             onClick={() => setActiveTab('hXY')}
             className={`param-tab ${activeTab === 'hXY' ? 'active' : ''}`}
           >
-            🔗 Paramètres hXY (liaisons)
+            Parametres hXY (liaisons)
           </button>
         </div>
 
-        {/* Content */}
         <div className="modal-content params-content">
           {activeTab === 'hX' && (
             <div>
               <div className="section-header">
                 <div>
-                  <h4>Paramètres hX (correction de α)</h4>
-                  <p>Hii = α + hX × β pour chaque élément</p>
+                  <h4>Parametres hX (correction de α)</h4>
+                  <p>Hii = α + hX × β pour chaque element</p>
                 </div>
                 <button
                   onClick={addNewElement}
                   className="hulis-button add-button"
                 >
-                  + Ajouter élément
+                  + Ajouter element
                 </button>
               </div>
 
@@ -208,7 +212,6 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
                     <div className="param-header">
                       <span className={`element-name ${isAdaptiveElement(element) ? 'adaptive' : ''}`}>
                         {element}
-                        {isAdaptiveElement(element) && <span className="adaptive-badge"></span>}
                       </span>
                       <span className="formula">
                         α {value >= 0 ? '+' : ''}{formatNumber(value)}β
@@ -221,7 +224,6 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
                       onChange={(e) => updateHX(element, e.target.value)}
                       className={`param-input-field ${isAdaptiveElement(element) ? 'adaptive-input' : ''}`}
                       title={getElementInfo(element)}
-                      placeholder={isAdaptiveElement(element) ? 'Auto-ajusté' : ''}
                     />
                     {getElementInfo(element) && (
                       <div className="adaptive-info-small">{getElementInfo(element)}</div>
@@ -236,7 +238,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
             <div>
               <div className="section-header">
                 <div>
-                  <h4>Paramètres hXY (correction de β)</h4>
+                  <h4>Parametres hXY (correction de β)</h4>
                   <p>Hij = hXY × β pour chaque type de liaison</p>
                 </div>
                 <button
@@ -247,28 +249,33 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
                 </button>
               </div>
 
-              <div className="params-grid">
-                {Object.entries(parameters.hXY).map(([bondType, value]) => (
-                  <div key={bondType} className="param-card">
-                    <div className="param-header">
-                      <span className={`bond-name ${isAdaptiveBond(bondType) ? 'adaptive' : ''}`}>
-                        {bondType}
-                        {isAdaptiveBond(bondType) && <span className="adaptive-badge"></span>}
-                      </span>
-                      <span className="formula">{formatNumber(value)}β</span>
+              <div className="grouped-params-container">
+                {Object.entries(groupParametersByCategory(parameters.hXY)).map(([category, categoryParams]) => (
+                  <div key={category} className="param-category">
+                    <h6 className="category-header">{category}</h6>
+                    <div className="category-grid">
+                      {Object.entries(categoryParams).map(([bondType, value]) => (
+                        <div key={bondType} className="param-card">
+                          <div className="param-header">
+                            <span className={`bond-name ${isAdaptiveBond(bondType) ? 'adaptive' : ''}`}>
+                              {bondType}
+                            </span>
+                            <span className="formula">{formatNumber(value)}β</span>
+                          </div>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={value}
+                            onChange={(e) => updateHXY(bondType, e.target.value)}
+                            className={`param-input-field ${isAdaptiveBond(bondType) ? 'adaptive-input' : ''}`}
+                            title={getBondInfo(bondType)}
+                          />
+                          {getBondInfo(bondType) && (
+                            <div className="bond-info-tooltip">{getBondInfo(bondType)}</div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={value}
-                      onChange={(e) => updateHXY(bondType, e.target.value)}
-                      className={`param-input-field ${isAdaptiveBond(bondType) ? 'adaptive-input' : ''}`}
-                      title={getBondInfo(bondType)}
-                      placeholder={isAdaptiveBond(bondType) ? 'Auto-ajusté' : ''}
-                    />
-                    {getBondInfo(bondType) && (
-                      <div className="adaptive-info-small">{getBondInfo(bondType)}</div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -276,22 +283,22 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           )}
         </div>
 
-        {/* Footer avec légende */}
         <div className="modal-footer">
           <div className="legend">
             <span className="legend-item">
               <span className="adaptive-badge"></span>
-              <span>Paramètre adaptatif (N, O, S, P)</span>
+              <span>Parametre adaptatif</span>
             </span>
           </div>
 
           <div className="footer-actions">
             <button
-              onClick={resetToDefaults}
-              className="hulis-button secondary"
+              onClick={validateParameterSet}
+              className="hulis-button secondary validate-button"
             >
-              🔄 Valeurs par défaut
+              Valider
             </button>
+            
             <button
               onClick={onClose}
               className="hulis-button secondary"
@@ -302,7 +309,7 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
               onClick={handleSave}
               className="hulis-button primary"
             >
-              💾 Sauvegarder
+              Sauvegarder
             </button>
           </div>
         </div>
@@ -310,7 +317,8 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
 
       <style>{`
         .huckel-params-modal {
-          width: 800px;
+          width: 900px;
+          max-width: 95vw;
           max-height: 90vh;
           background: #e0e8ff;
           border: 2px outset #c0c0c0;
@@ -336,54 +344,68 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           margin-top: 2px;
         }
 
-        .huckel-header-style .close-button {
-          background: rgba(255,255,255,0.2);
-          border: 1px outset #c0c0c0;
-          color: white;
-          font-size: 14px;
-          width: 24px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .huckel-header-style .close-button:hover {
-          background: rgba(255,255,255,0.3);
-        }
-
-        .adaptive-info {
+        .parameter-source-info {
           background: linear-gradient(135deg, #f0f8ff 0%, #e6f3ff 100%);
           border-bottom: 1px solid #ccc;
-          padding: 10px 16px;
+          padding: 12px 16px;
         }
 
-        .info-box {
+        .source-header h5 {
+          margin: 0 0 4px 0;
+          color: #789fedff;
+          font-size: 14px;
+        }
+
+        .source-header p {
+          margin: 0;
+          font-size: 11px;
+          color: #666;
+          font-style: italic;
+        }
+
+        .adaptation-info {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 8px;
+        }
+
+        .adaptation-card, .coverage-card {
+          background: rgba(255, 255, 255, 0.7);
+          padding: 8px;
+          border-radius: 4px;
+          border: 1px solid #ddd;
+        }
+
+        .adaptation-card h6, .coverage-card h6 {
+          margin: 0 0 6px 0;
           font-size: 12px;
           color: #333;
-          line-height: 1.4;
         }
 
-        .info-box strong {
-          color: #789fedff;
+        .adaptation-card ul {
+          margin: 0;
+          padding-left: 16px;
+          font-size: 10px;
         }
 
-        .info-box small {
-          color: #666;
+        .adaptation-card li {
+          margin-bottom: 2px;
+        }
+
+        .element-coverage {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-bottom: 4px;
         }
 
         .element-group {
-          display: inline-block;
-          margin: 0 2px;
-        }
-
-        .element-group strong {
-          color: #e67e22;
-          font-weight: bold;
-        }
-
-        .separator {
-          color: #999;
+          background: #789fedff;
+          color: white;
+          padding: 2px 6px;
+          border-radius: 10px;
+          font-size: 10px;
           font-weight: bold;
         }
 
@@ -413,13 +435,163 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           font-weight: bold;
         }
 
-        .param-tab:hover:not(.active) {
-          background: #d8d8d8;
-        }
-
         .params-content {
           padding: 16px;
           background: #e0e8ff;
+          overflow-y: auto;
+          max-height: 400px;
+        }
+
+        .grouped-params-container {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .param-category {
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 6px;
+          padding: 12px;
+          border: 1px solid #ccc;
+        }
+
+        .category-header {
+          margin: 0 0 8px 0;
+          font-size: 13px;
+          font-weight: bold;
+          color: #789fedff;
+          border-bottom: 1px solid #ddd;
+          padding-bottom: 4px;
+        }
+
+        .category-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 8px;
+        }
+
+        .params-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 12px;
+          max-height: 350px;
+          overflow-y: auto;
+          padding: 4px;
+        }
+
+        .param-card {
+          background: white;
+          border: 1px inset #c0c0c0;
+          padding: 8px;
+          border-radius: 4px;
+          transition: box-shadow 0.2s;
+          position: relative;
+        }
+
+        .param-card:hover {
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .param-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+        }
+
+        .element-name, .bond-name {
+          font-weight: bold;
+          font-size: 12px;
+          color: #95afe4ff;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .element-name.adaptive, .bond-name.adaptive {
+          color: #e67e22;
+          background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+          padding: 2px 6px;
+          border-radius: 10px;
+          font-size: 11px;
+        }
+
+        .formula {
+          font-size: 10px;
+          color: #666;
+          font-family: 'Courier New', monospace;
+          background: #f8f8f8;
+          padding: 1px 4px;
+          border-radius: 2px;
+          border: 1px solid #e0e0e0;
+        }
+
+        .param-input-field {
+          width: 100%;
+          padding: 4px 6px;
+          border: 1px inset #c0c0c0;
+          font-size: 11px;
+          font-family: inherit;
+          text-align: center;
+          background: white;
+          transition: all 0.2s;
+        }
+
+        .param-input-field:focus {
+          outline: none;
+          border: 1px inset #a8bde7ff;
+          background: #f8f8ff;
+        }
+
+        .param-input-field.adaptive-input {
+          background: linear-gradient(135deg, #fff8f0 0%, #fff3e0 100%);
+          border: 1px inset #ffb74d;
+        }
+
+        .param-input-field.adaptive-input:focus {
+          background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+          border: 1px inset #ff9800;
+        }
+
+        .adaptive-info-small {
+          font-size: 9px;
+          color: #e67e22;
+          text-align: center;
+          margin-top: 4px;
+          font-style: italic;
+          background: rgba(255, 152, 0, 0.1);
+          padding: 2px 4px;
+          border-radius: 2px;
+        }
+
+        .bond-info-tooltip {
+          display: none;
+          position: absolute;
+          bottom: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #333;
+          color: white;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 9px;
+          white-space: nowrap;
+          z-index: 1000;
+          margin-bottom: 5px;
+        }
+
+        .bond-info-tooltip::after {
+          content: '';
+          position: absolute;
+          top: 100%;
+          left: 50%;
+          transform: translateX(-50%);
+          border: 4px solid transparent;
+          border-top-color: #333;
+        }
+
+        .param-card:hover .bond-info-tooltip {
+          display: block;
         }
 
         .section-header {
@@ -456,112 +628,6 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           background: #85aaf4ff;
         }
 
-        .params-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-          gap: 12px;
-          max-height: 320px;
-          overflow-y: auto;
-          padding: 4px;
-        }
-
-        .param-card {
-          background: white;
-          border: 1px inset #c0c0c0;
-          padding: 12px;
-          border-radius: 4px;
-          transition: box-shadow 0.2s;
-        }
-
-        .param-card:hover {
-          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .param-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-        }
-
-        .element-name,
-        .bond-name {
-          font-weight: bold;
-          font-size: 14px;
-          color: #95afe4ff;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .element-name.adaptive,
-        .bond-name.adaptive {
-          color: #e67e22;
-          background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-          padding: 2px 6px;
-          border-radius: 12px;
-          font-size: 13px;
-        }
-
-        .adaptive-badge {
-          font-size: 12px;
-          color: #ff9800;
-          animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.6; }
-        }
-
-        .formula {
-          font-size: 11px;
-          color: #666;
-          font-family: 'Courier New', monospace;
-          background: #f8f8f8;
-          padding: 2px 6px;
-          border-radius: 2px;
-          border: 1px solid #e0e0e0;
-        }
-
-        .param-input-field {
-          width: 100%;
-          padding: 6px 8px;
-          border: 1px inset #c0c0c0;
-          font-size: 12px;
-          font-family: inherit;
-          text-align: center;
-          background: white;
-          transition: all 0.2s;
-        }
-
-        .param-input-field:focus {
-          outline: none;
-          border: 1px inset #a8bde7ff;
-          background: #f8f8ff;
-        }
-
-        .param-input-field.adaptive-input {
-          background: linear-gradient(135deg, #fff8f0 0%, #fff3e0 100%);
-          border: 1px inset #ffb74d;
-        }
-
-        .param-input-field.adaptive-input:focus {
-          background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
-          border: 1px inset #ff9800;
-        }
-
-        .adaptive-info-small {
-          font-size: 9px;
-          color: #e67e22;
-          text-align: center;
-          margin-top: 4px;
-          font-style: italic;
-          background: rgba(255, 152, 0, 0.1);
-          padding: 2px 4px;
-          border-radius: 2px;
-        }
-
         .modal-footer {
           padding: 12px 16px;
           border-top: 1px solid #ccc;
@@ -576,12 +642,21 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           align-items: center;
           font-size: 11px;
           color: #666;
+          gap: 12px;
         }
 
         .legend-item {
           display: flex;
           align-items: center;
           gap: 4px;
+        }
+
+        .adaptive-badge {
+          width: 12px;
+          height: 12px;
+          background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+          border: 1px solid #ffb74d;
+          border-radius: 50%;
         }
 
         .footer-actions {
@@ -617,21 +692,50 @@ const HuckelParametersModal: React.FC<HuckelParametersModalProps> = ({
           background: #d8d8d8;
         }
 
-        /* Scrollbar personnalisée pour la grille */
+        .validate-button {
+          background: #4caf50 !important;
+          color: white !important;
+        }
+
+        .validate-button:hover {
+          background: #45a049 !important;
+        }
+
+        .close-button {
+          background: rgba(255,255,255,0.2);
+          border: 1px outset #c0c0c0;
+          color: white;
+          font-size: 14px;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .close-button:hover {
+          background: rgba(255,255,255,0.3);
+        }
+
+        .params-content::-webkit-scrollbar,
         .params-grid::-webkit-scrollbar {
           width: 8px;
         }
 
+        .params-content::-webkit-scrollbar-track,
         .params-grid::-webkit-scrollbar-track {
           background: #f0f0f0;
           border-radius: 4px;
         }
 
+        .params-content::-webkit-scrollbar-thumb,
         .params-grid::-webkit-scrollbar-thumb {
           background: #c0c0c0;
           border-radius: 4px;
         }
 
+        .params-content::-webkit-scrollbar-thumb:hover,
         .params-grid::-webkit-scrollbar-thumb:hover {
           background: #a0a0a0;
         }
