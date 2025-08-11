@@ -1,4 +1,3 @@
-// OrbitalDiagram.tsx - Version améliorée avec visualisation
 
 import React from 'react';
 

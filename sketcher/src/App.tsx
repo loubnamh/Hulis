@@ -31,7 +31,6 @@ interface MesomeryResults {
 }
 
 const App: React.FC = () => {
-  // États existants
   const [totalCharge, setTotalCharge] = useState<number>(0);
   const [alpha, setAlpha] = useState<number>(-11.4);
   const [beta, setBeta] = useState<number>(-2.4);
@@ -49,22 +48,18 @@ const App: React.FC = () => {
   const [trustRank, setTrustRank] = useState<number>(100);
   const [selectedStructure, setSelectedStructure] = useState<number>(0);
   
-  // Nouveaux états pour la visualisation des orbitales
   const [selectedOrbitalIndex, setSelectedOrbitalIndex] = useState<number>(-1);
   const [showOrbitalVisualization, setShowOrbitalVisualization] = useState<boolean>(true);
   const [orbitalScale, setOrbitalScale] = useState<number>(50);
   
-  // États pour les modales
   const [showNumberingModal, setShowNumberingModal] = useState<boolean>(false);
   const [customNumbering, setCustomNumbering] = useState<{ [atomId: number]: string }>({});
   const [showHuckelParamsModal, setShowHuckelParamsModal] = useState<boolean>(false);
   const [huckelParameters, setHuckelParameters] = useState<HuckelParameters>(DEFAULT_HUCKEL_PARAMETERS);
 
-  // Références
   const ketcherComponentRef = useRef<KetcherComponentRef>(null);
   const huckelCalculatorRef = useRef<HuckelCalculator | null>(null);
 
-  // Initialisation de Ketcher
   const handleKetcherInit = useCallback((ketcher: Ketcher) => {
     if (ketcherComponentRef.current) {
       ketcherComponentRef.current.ketcher = ketcher;
@@ -80,12 +75,10 @@ const App: React.FC = () => {
     setStatusMessage('Ketcher initialise - Pret a dessiner');
   }, [huckelParameters]);
 
-  // Gestion des charges
   const changeCharge = (delta: number) => {
     setTotalCharge(prev => prev + delta);
   };
 
-  // Gestion de la numérotation des atomes
   const handleAtomNumberingChange = async (value: boolean) => {
     if (!ketcherComponentRef.current) {
       setStatusMessage('Erreur: Ketcher non initialise');
@@ -123,7 +116,6 @@ const App: React.FC = () => {
         await ketcherComponentRef.current.addAtomNumbers(numbering);
         setStatusMessage('Numerotation personnalisee appliquee - Les nouveaux atomes seront numerotes automatiquement');
         
-        // Actualiser l'overlay des orbitales
         if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
           setTimeout(() => ketcherComponentRef.current?.refreshOrbitalOverlay(), 100);
         }
@@ -133,7 +125,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Gestion des paramètres Hückel
   const handleHuckelParametersSave = (newParameters: HuckelParameters) => {
     setHuckelParameters(newParameters);
     
@@ -147,14 +138,12 @@ const App: React.FC = () => {
     setStatusMessage(`Parametres Huckel mis a jour: ${hXCount} elements hX, ${hXYCount} liaisons hXY`);
   };
 
-  // Gestion des changements de structure
   const handleStructureChange = useCallback(() => {
     setTimeout(() => {
       if (ketcherComponentRef.current) {
         const atoms = ketcherComponentRef.current.getAtomsInfo();
         setStatusMessage(`Structure modifiee - ${atoms.length} atome${atoms.length > 1 ? 's' : ''}`);
         
-        // Réinitialiser la sélection d'orbitale lors d'un changement de structure
         if (selectedOrbitalIndex >= 0) {
           setSelectedOrbitalIndex(-1);
           setStatusMessage('Structure modifiee - Selection d\'orbitale reinitializee');
@@ -179,7 +168,6 @@ const App: React.FC = () => {
             });
         }
 
-        // Actualiser l'overlay des orbitales
         if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
           setTimeout(() => ketcherComponentRef.current?.refreshOrbitalOverlay(), 150);
         }
@@ -187,19 +175,15 @@ const App: React.FC = () => {
     }, 100);
   }, [atomNumbering, customNumbering, selectedOrbitalIndex]);
 
-  // Basculer la langue
   const toggleLanguage = () => {
     setCurrentLanguage(prev => prev === 'fr' ? 'en' : 'fr');
   };
 
-  // Gestion de la sélection d'orbitales
   const handleEnergyLevelClick = (index: number) => {
     if (selectedOrbitalIndex === index) {
-      // Déselectionner si on clique sur la même orbitale
       setSelectedOrbitalIndex(-1);
       setStatusMessage('Orbitale deselectionee');
     } else {
-      // Sélectionner une nouvelle orbitale
       setSelectedOrbitalIndex(index);
       const energyLabel = huckelResults?.energyExpressions?.[index] || 
                          huckelResults?.energies[index]?.toFixed(3) + 'β';
@@ -207,13 +191,11 @@ const App: React.FC = () => {
       setStatusMessage(`Orbitale ψ${index + 1} selectionnee (E=${energyLabel}, ${occupation} e-)`);
     }
     
-    // Actualiser l'overlay des orbitales
     if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
       setTimeout(() => ketcherComponentRef.current?.refreshOrbitalOverlay(), 50);
     }
   };
 
-  // Calcul Hückel
   const calculateHuckel = async () => {
     if (!ketcherComponentRef.current?.ketcher || !huckelCalculatorRef.current) {
       setStatusMessage('Erreur: Ketcher non initialise');
@@ -223,7 +205,6 @@ const App: React.FC = () => {
     setIsCalculating(true);
     setStatusMessage('Detection automatique du systeme pi...');
     
-    // Réinitialiser la sélection d'orbitale
     setSelectedOrbitalIndex(-1);
 
     try {
@@ -240,7 +221,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Calcul de mésomérie
   const calculateMesomery = async () => {
     if (!ketcherComponentRef.current?.ketcher) {
       setStatusMessage('Erreur: Ketcher non initialise');
@@ -272,7 +252,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Effacer tout
   const clearAll = async () => {
     if (ketcherComponentRef.current) {
       await ketcherComponentRef.current.setMolecule('');
@@ -286,7 +265,6 @@ const App: React.FC = () => {
     setStatusMessage('Tout efface - Pret pour une nouvelle molecule');
   };
 
-  // Réorganiser les atomes
   const reorderAtoms = async () => {
     if (!ketcherComponentRef.current) {
       setStatusMessage('Erreur: Ketcher non initialise');
@@ -305,7 +283,6 @@ const App: React.FC = () => {
       setStatusMessage('Reorganisation des atomes...');
       setTimeout(() => {
         setStatusMessage('Atomes reorganises');
-        // Actualiser l'overlay des orbitales
         if (ketcherComponentRef.current?.refreshOrbitalOverlay) {
           ketcherComponentRef.current.refreshOrbitalOverlay();
         }
@@ -313,13 +290,11 @@ const App: React.FC = () => {
     }
   };
 
-  // Ouvrir les paramètres Hückel
   const openHuckelParameters = () => {
     setShowHuckelParamsModal(true);
     setStatusMessage('Configuration des parametres Huckel...');
   };
 
-  // Basculer l'affichage des orbitales
   const toggleOrbitalVisualization = () => {
     setShowOrbitalVisualization(prev => !prev);
     setStatusMessage(showOrbitalVisualization ? 
