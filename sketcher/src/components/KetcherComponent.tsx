@@ -220,7 +220,7 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
       console.log(` Canvas ${index} hooked`);
     };
 
-    const drawOrbitalsOnCanvas = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
+const drawOrbitalsOnCanvas = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
       if (!ketcherRef.current || !huckelResults || selectedOrbitalIndex < 0) return;
       
       try {
@@ -255,13 +255,13 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
           if (maxDimension > 0) {
             const targetSize = Math.min(canvas.width, canvas.height) * 0.6;
             scale = targetSize / maxDimension;
-            scale = Math.max(20, Math.min(100, scale)); // Limiter l'échelle
+            scale = Math.max(20, Math.min(100, scale));
           }
         }
         
         piAtoms.forEach((piAtom: any, piAtomIndex: number) => {
           const coeff = coefficients[piAtomIndex];
-          if (Math.abs(coeff) < 0.05) return; // Seuil minimal
+          if (Math.abs(coeff) < 0.05) return;
           
           const atom = struct.atoms.get(piAtom.id);
           if (!atom || !atom.pp) {
@@ -271,7 +271,7 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
           
           const canvasPos = {
             x: centerX + (atom.pp.x * scale),
-            y: centerY - (atom.pp.y * scale) // Y inversé
+            y: centerY - (atom.pp.y * scale) 
           };
           
           const baseRadius = 12;
@@ -280,38 +280,58 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
           const proportionalRadius = baseRadius * Math.sqrt(coeffAbs) * (orbitalScale / 50);
           const finalRadius = Math.max(4, Math.min(35, proportionalRadius));
           
+          
+          const offsetX = finalRadius * 0.2; 
+          const offsetY = finalRadius * 0.2;
+          const largerRadius = finalRadius * 1.5; 
+          
           console.log(` Canvas - Atome π ${piAtomIndex} (ID réel=${piAtom.id}, ${piAtom.element}${piAtom.userNumber || ''}): pos(${canvasPos.x.toFixed(1)}, ${canvasPos.y.toFixed(1)}), coeff=${coeff.toFixed(3)}, radius=${finalRadius.toFixed(1)}`);
           
           ctx.save();
-          ctx.globalAlpha = 0.7;
+          ctx.globalAlpha = 0.5; 
           
           ctx.beginPath();
-          ctx.arc(canvasPos.x, canvasPos.y, finalRadius, 0, 2 * Math.PI);
+          ctx.arc(canvasPos.x + offsetX, canvasPos.y, largerRadius, 0, 2 * Math.PI);
           
           if (coeff > 0) {
-            ctx.fillStyle = '#ff4444'; 
-            ctx.strokeStyle = '#cc0000';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.strokeStyle = '#ec6262ff';
           } else {
-            ctx.fillStyle = '#4444ff';
-            ctx.strokeStyle = '#0000cc';
+            ctx.fillStyle = 'rgba(255, 68, 68, 0.6)';
+            ctx.strokeStyle = '#ec6262ff';
           }
           
           ctx.fill();
-          ctx.lineWidth = 2;
+          ctx.lineWidth = 2; 
+          ctx.stroke();
+          
+          ctx.beginPath();
+          ctx.arc(canvasPos.x - offsetX, canvasPos.y + offsetY, largerRadius, 0, 2 * Math.PI);
+          
+          if (coeff > 0) {
+            ctx.fillStyle = 'rgba(255, 68, 68, 0.6)'; 
+            ctx.strokeStyle = '#ec6262ff';
+          } else {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.strokeStyle = '#ec6262ff';
+          }
+          
+          ctx.fill();
+          ctx.lineWidth = 3;
           ctx.stroke();
           
           ctx.globalAlpha = 1;
-          ctx.font = 'bold 12px Arial';
+          ctx.font = 'bold 10px Arial';
           ctx.textAlign = 'center';
           
-          const textY = canvasPos.y - finalRadius - 6;
+          const textY = canvasPos.y - largerRadius - 8;
           
           ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 4;
-          ctx.strokeText(coeff.toFixed(3), canvasPos.x, textY);
+          ctx.lineWidth = 6;
+          ctx.strokeText(coeff.toFixed(2), canvasPos.x, textY);
           
           ctx.fillStyle = '#000000';
-          ctx.fillText(coeff.toFixed(3), canvasPos.x, textY);
+          ctx.fillText(coeff.toFixed(2), canvasPos.x, textY);
           
           ctx.restore();
         });
@@ -319,37 +339,6 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
       } catch (error) {
         console.error(' Erreur dessin canvas:', error);
       }
-    };
-
-    const hookSVGRendering = (svg: SVGSVGElement) => {
-      console.log(' Hook SVG rendering');
-      
-      const observer = new MutationObserver((mutations) => {
-        let needsOrbitalUpdate = false;
-        
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            needsOrbitalUpdate = true;
-          }
-          if (mutation.type === 'attributes' && 
-              (mutation.attributeName === 'transform' || mutation.attributeName === 'viewBox')) {
-            needsOrbitalUpdate = true;
-          }
-        });
-        
-        if (needsOrbitalUpdate && showOrbitals && selectedOrbitalIndex >= 0 && huckelResults) {
-          setTimeout(() => drawOrbitalsOnSVG(svg), 10);
-        }
-      });
-      
-      observer.observe(svg, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ['transform', 'viewBox']
-      });
-      
-      (svg as any).orbitalObserver = observer;
     };
 
     const drawOrbitalsOnSVG = (svg: SVGSVGElement) => {
@@ -412,7 +401,6 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
             if (x !== 0 && y !== 0 && label.match(/^[A-Z][a-z]?[0-9]*$/)) {
               console.log(` Texte atome détecté: "${label}" à (${x}, ${y})`);
               
-              // Vérifier qu'on n'a pas déjà cette position
               const exists = detectedAtoms.some(atom => 
                 Math.abs(atom.x - x) < 10 && Math.abs(atom.y - y) < 10
               );
@@ -508,7 +496,7 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
           return;
         }
         
-        console.log(`📍 ${mappedCount}/${piAtoms.length} atomes π mappés avec succès`);
+        console.log(` ${mappedCount}/${piAtoms.length} atomes π mappés avec succès`);
         
         piAtoms.forEach((piAtom: any, piAtomIndex: number) => {
           const coeff = coefficients[piAtomIndex];
@@ -525,50 +513,76 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
           const proportionalRadius = baseRadius * Math.sqrt(coeffAbs) * (orbitalScale / 50);
           const finalRadius = Math.max(4, Math.min(35, proportionalRadius));
           
+         
+          const offsetX = finalRadius * 0.2; 
+          const offsetY = finalRadius * 0.2; 
+          const largerRadius = finalRadius * 1.5; 
+          
           console.log(` SVG - Dessine orbitale ${piAtomIndex} (ID=${piAtom.id}, ${piAtom.element}${piAtom.userNumber || ''}): pos(${screenPos.x.toFixed(1)}, ${screenPos.y.toFixed(1)}), coeff=${coeff.toFixed(3)}`);
           
           const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
           group.setAttribute('class', 'ketcher-orbital');
           
-          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-          circle.setAttribute('cx', screenPos.x.toString());
-          circle.setAttribute('cy', screenPos.y.toString());
-          circle.setAttribute('r', finalRadius.toString());
+         
+          const backgroundCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          backgroundCircle.setAttribute('cx', (screenPos.x + offsetX).toString());
+          backgroundCircle.setAttribute('cy', screenPos.y.toString());
+          backgroundCircle.setAttribute('r', largerRadius.toString());
           
           if (coeff > 0) {
-            circle.setAttribute('fill', 'rgba(255, 68, 68, 0.7)');
-            circle.setAttribute('stroke', '#cc0000');
+            
+            backgroundCircle.setAttribute('fill', 'rgba(255, 255, 255, 0.8)');
+            backgroundCircle.setAttribute('stroke', '#ec6262ff');
           } else {
-            circle.setAttribute('fill', 'rgba(68, 68, 255, 0.7)');
-            circle.setAttribute('stroke', '#0000cc');
+            
+            backgroundCircle.setAttribute('fill', 'rgba(255, 68, 68, 0.6)');
+            backgroundCircle.setAttribute('stroke', '#ec6262ff');
           }
-          circle.setAttribute('stroke-width', '2');
+          backgroundCircle.setAttribute('stroke-width', '3');
           
-          const textY = screenPos.y - finalRadius - 6;
+          
+          const foregroundCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          foregroundCircle.setAttribute('cx', (screenPos.x - offsetX).toString());
+          foregroundCircle.setAttribute('cy', (screenPos.y + offsetY).toString());
+          foregroundCircle.setAttribute('r', largerRadius.toString());
+          
+          if (coeff > 0) {
+           
+            foregroundCircle.setAttribute('fill', 'rgba(255, 68, 68, 0.6)');
+            foregroundCircle.setAttribute('stroke', '#ec6262ff');
+          } else {
+            
+            foregroundCircle.setAttribute('fill', 'rgba(255, 255, 255, 0.8)');
+            foregroundCircle.setAttribute('stroke', '#ec6262ff');
+          }
+          foregroundCircle.setAttribute('stroke-width', '3');
+          
+          const textY = screenPos.y - largerRadius - 8; // Plus éloigné des cercles
           
           const textOutline = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           textOutline.setAttribute('x', screenPos.x.toString());
           textOutline.setAttribute('y', textY.toString());
           textOutline.setAttribute('text-anchor', 'middle');
           textOutline.setAttribute('font-family', 'Arial, sans-serif');
-          textOutline.setAttribute('font-size', '12');
+          textOutline.setAttribute('font-size', '10'); 
           textOutline.setAttribute('font-weight', 'bold');
           textOutline.setAttribute('stroke', '#ffffff');
-          textOutline.setAttribute('stroke-width', '4');
+          textOutline.setAttribute('stroke-width', '6'); 
           textOutline.setAttribute('fill', 'none');
-          textOutline.textContent = coeff.toFixed(3);
+          textOutline.textContent = coeff.toFixed(2); 
           
           const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
           text.setAttribute('x', screenPos.x.toString());
           text.setAttribute('y', textY.toString());
           text.setAttribute('text-anchor', 'middle');
           text.setAttribute('font-family', 'Arial, sans-serif');
-          text.setAttribute('font-size', '12');
+          text.setAttribute('font-size', '10');
           text.setAttribute('font-weight', 'bold');
           text.setAttribute('fill', '#000000');
-          text.textContent = coeff.toFixed(3);
+          text.textContent = coeff.toFixed(2);
           
-          group.appendChild(circle);
+          group.appendChild(backgroundCircle);
+          group.appendChild(foregroundCircle);
           group.appendChild(textOutline);
           group.appendChild(text);
           
@@ -581,6 +595,39 @@ const KetcherComponent = forwardRef<KetcherComponentRef, KetcherComponentProps>(
         console.error(' Erreur dessin SVG:', error);
       }
     };
+
+    const hookSVGRendering = (svg: SVGSVGElement) => {
+      console.log(' Hook SVG rendering');
+      
+      const observer = new MutationObserver((mutations) => {
+        let needsOrbitalUpdate = false;
+        
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+            needsOrbitalUpdate = true;
+          }
+          if (mutation.type === 'attributes' && 
+              (mutation.attributeName === 'transform' || mutation.attributeName === 'viewBox')) {
+            needsOrbitalUpdate = true;
+          }
+        });
+        
+        if (needsOrbitalUpdate && showOrbitals && selectedOrbitalIndex >= 0 && huckelResults) {
+          setTimeout(() => drawOrbitalsOnSVG(svg), 10);
+        }
+      });
+      
+      observer.observe(svg, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['transform', 'viewBox']
+      });
+      
+      (svg as any).orbitalObserver = observer;
+    };
+
+   
 
     const unhookKetcherCanvas = () => {
       if (!isCanvasHooked) return;
